@@ -1,0 +1,20 @@
+{
+  "name": "punilla-full-web",
+  "version": "2.0.0",
+  "description": "Punilla Full — landing + motor de Fundadores (server-side) para la campaña de apertura",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "migrate": "node db/migrate.js",
+    "seed": "node db/seed.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "pg": "^8.12.0"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "_nota": "Lista y stocks TENTATIVOS (portados del prototipo). Nico define los definitivos Mar-Jue. 'prob' = peso relativo (no hace falta que sumen 100). 'stock' null = ilimitado. 'es_consuelo' true = premio que garantiza que TODOS ganan cuando se agota el stock premium. El seed NO pisa el stock ya consumido en redeploys.",
+  "premios": [
+    { "nombre": "10% en toda la fiambrería", "prob": 26, "stock": 40, "vigencia_dias": 20, "vigencia_texto": "20 días", "nivel": "comun", "orden": 1 },
+    { "nombre": "2x1 en despensa seleccionada", "prob": 18, "stock": 30, "vigencia_dias": 15, "vigencia_texto": "15 días", "nivel": "comun", "orden": 2 },
+    { "nombre": "15% en verdulería", "prob": 18, "stock": 30, "vigencia_dias": 10, "vigencia_texto": "10 días", "nivel": "comun", "orden": 3 },
+    { "nombre": "$3.000 de descuento en carnicería", "prob": 14, "stock": 25, "vigencia_dias": 20, "vigencia_texto": "20 días", "nivel": "comun", "orden": 4 },
+    { "nombre": "1 kg de milanesas a precio de apertura", "prob": 9, "stock": 15, "vigencia_dias": 15, "vigencia_texto": "15 días", "nivel": "comun", "orden": 5 },
+    { "nombre": "Regalo sorpresa hoy en el local", "prob": 5, "stock": 10, "vigencia_dias": 0, "vigencia_texto": "HOY", "nivel": "comun", "orden": 6 },
+    { "nombre": "5% en tu primera compra", "prob": 10, "stock": null, "vigencia_dias": 15, "vigencia_texto": "15 días", "nivel": "comun", "es_consuelo": true, "orden": 99 }
+  ]
+}

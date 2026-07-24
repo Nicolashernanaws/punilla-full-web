@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PUNILLA FULL — Tarjeta Fundador</title>
+<meta name="description" content="Todos los Fundadores de Punilla Full ganan algo. Cargá tus datos y fijate qué te tocó.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --amarillo:#FFD11A;
+    --rojo:#D62820;
+    --rojo-oscuro:#A8160F;
+    --negro:#1A1714;
+    --crema:#FFF6DD;
+    --blanco:#FFFFFF;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Archivo',Arial,sans-serif;
+    background:var(--crema);
+    color:var(--negro);
+    display:flex;flex-direction:column;
+    max-width:480px;margin:0 auto;
+    min-height:100dvh;
+  }
+  .anton{font-family:'Anton','Archivo Black',Impact,sans-serif;font-style:italic;text-transform:uppercase;letter-spacing:.01em}
+  .eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.18em;font-size:.7rem}
+  header{
+    background:var(--amarillo);
+    border-bottom:4px solid var(--negro);
+    padding:14px 20px;
+    display:flex;align-items:center;gap:12px;
+  }
+  /* Emblema: logo vector real de la marca (símbolo #pf-logo, igual que el sitio). */
+  .emblema{width:46px;height:46px;flex:none;display:block}
+  .wordmark{
+    font-size:1.7rem;color:var(--rojo);line-height:.95;
+    -webkit-text-stroke:1.5px var(--negro);
+    text-shadow:2px 2px 0 var(--negro);
+  }
+  .wordmark small{display:block;font-size:.55rem;color:var(--negro);-webkit-text-stroke:0;text-shadow:none;font-family:'Archivo';font-style:normal;font-weight:800;letter-spacing:.25em}
+  main{flex:1;display:flex;flex-direction:column}
+  .screen{display:none;flex:1;flex-direction:column}
+  .screen.activa{display:flex}
+  #s-form{padding:26px 20px 20px}
+  #s-form .eyebrow{color:var(--rojo-oscuro);margin-bottom:8px}
+  #s-form h1{font-size:2.6rem;color:var(--negro);line-height:.95;margin-bottom:10px}
+  #s-form h1 em{font-style:italic;color:var(--rojo)}
+  .bajada{font-weight:600;font-size:.95rem;margin-bottom:22px;color:var(--negro)}
+  .stock-chip{
+    display:inline-block;background:var(--negro);color:var(--amarillo);
+    font-weight:800;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;
+    padding:6px 12px;border-radius:3px;margin-bottom:18px;
+  }
+  form{display:flex;flex-direction:column;gap:14px}
+  label{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;display:block;margin-bottom:5px}
+  label .opc{font-weight:600;letter-spacing:.05em;text-transform:none;color:#7a726a}
+  input,select{
+    width:100%;padding:14px;font-size:1.05rem;font-family:'Archivo';font-weight:600;
+    border:3px solid var(--negro);border-radius:6px;background:var(--blanco);color:var(--negro);
+  }
+  input:focus,select:focus{outline:3px solid var(--rojo);outline-offset:1px}
+  .consent{display:flex;gap:10px;align-items:flex-start;font-size:.78rem;font-weight:600;line-height:1.35}
+  .consent input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--rojo)}
+  .consent a{color:var(--rojo-oscuro)}
+  .btn{
+    font-family:'Anton';font-style:italic;text-transform:uppercase;
+    font-size:1.5rem;letter-spacing:.03em;
+    background:var(--rojo);color:var(--blanco);
+    border:3px solid var(--negro);border-radius:8px;
+    box-shadow:0 5px 0 var(--negro);
+    padding:16px;cursor:pointer;width:100%;
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--negro)}
+  .btn[disabled]{opacity:.6;cursor:progress}
+  .error{color:var(--rojo-oscuro);font-weight:800;font-size:.78rem;display:none;margin-top:-6px}
+  .error.visible{display:block}
+  #s-contador{
+    background:var(--negro);color:var(--crema);
+    align-items:center;justify-content:center;text-align:center;
+    padding:30px 20px;gap:26px;
+  }
+  #s-contador .eyebrow{color:var(--amarillo)}
+  #flipper{
+    font-family:'Anton';font-style:italic;text-transform:uppercase;
+    font-size:1.5rem;color:var(--crema);min-height:2.4em;
+    display:flex;align-items:center;justify-content:center;opacity:.85;padding:0 10px;
+  }
+  .ring-wrap{position:relative;width:170px;height:170px}
+  .ring-wrap svg{transform:rotate(-90deg)}
+  .ring-bg{stroke:#3a342e;stroke-width:10;fill:none}
+  .ring-fg{stroke:var(--rojo);stroke-width:10;fill:none;stroke-linecap:round;
+    stroke-dasharray:471;stroke-dashoffset:0;transition:stroke-dashoffset 1s linear}
+  #num{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    font-family:'Anton';font-style:italic;font-size:5.5rem;color:var(--amarillo);
+  }
+  #s-premio{background:var(--amarillo);padding:26px 20px;text-align:center;align-items:center}
+  .chip-fundador{
+    background:var(--negro);color:var(--amarillo);
+    font-family:'Anton';font-style:italic;font-size:1.25rem;
+    padding:8px 20px;border-radius:4px;margin-bottom:16px;letter-spacing:.04em;
+  }
+  #s-premio .grito{font-size:1rem;font-weight:800;letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px}
+  #premio-nombre{
+    font-size:2.9rem;line-height:.95;color:var(--rojo);
+    -webkit-text-stroke:2px var(--negro);
+    text-shadow:3px 3px 0 var(--negro);
+    margin-bottom:16px;
+    animation:stamp .35s cubic-bezier(.2,1.6,.4,1) both;
+  }
+  @keyframes stamp{from{transform:scale(2.2) rotate(-4deg);opacity:0}to{transform:scale(1) rotate(-2deg);opacity:1}}
+  .yajugaste{font-weight:800;font-size:.8rem;color:var(--negro);background:#ffffff88;border:2px solid var(--negro);border-radius:6px;padding:6px 12px;margin-bottom:12px;display:none}
+  .plaquita{
+    background:var(--blanco);border:3px solid var(--negro);border-radius:8px;
+    padding:16px;width:100%;max-width:340px;margin-bottom:16px;
+  }
+  .plaquita .lbl{font-size:.68rem;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#7a726a;margin-bottom:4px}
+  #codigo{font-family:'Anton';font-style:italic;font-size:1.9rem;letter-spacing:.08em}
+  #vigencia{font-weight:800;font-size:.85rem;margin-top:8px;color:var(--rojo-oscuro)}
+  .btn-negro{background:var(--negro);color:var(--amarillo);margin-bottom:10px}
+  .caja-nota{font-weight:600;font-size:.82rem;max-width:300px;margin-bottom:8px}
+  .conf{position:fixed;width:11px;height:11px;top:-20px;z-index:9;animation:caer 1.7s ease-in forwards}
+  @keyframes caer{to{transform:translateY(110dvh) rotate(540deg);opacity:.2}}
+  footer{
+    background:var(--negro);color:var(--crema);
+    padding:14px 20px;text-align:center;
+    font-size:.72rem;font-weight:600;letter-spacing:.04em;
+  }
+  footer strong{color:var(--amarillo);font-weight:800}
+  @media (prefers-reduced-motion: reduce){
+    *{animation:none!important;transition:none!important}
+  }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pf-logo" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="57" fill="#FFD11A" stroke="#1A1714" stroke-width="5"/>
+    <circle cx="60" cy="60" r="47" fill="none" stroke="#1A1714" stroke-width="2" stroke-dasharray="3 4"/>
+    <path d="M14 76 L34 44 L48 62 L64 34 L82 66 L96 50 L106 76 Z" fill="#1A1714"/>
+    <path d="M48 62 L64 34 L74 50 Z" fill="#A8160F"/>
+    <path d="M60 104 C46 92 74 82 60 72 C48 64 72 58 60 50" fill="none" stroke="#D62820" stroke-width="6" stroke-linecap="round"/>
+    <g stroke="#1A1714" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M40 84 h30 l4 -16 h-40"/>
+      <circle cx="46" cy="96" r="4" fill="#1A1714"/>
+      <circle cx="66" cy="96" r="4" fill="#1A1714"/>
+      <path d="M34 68 h6"/>
+    </g>
+  </symbol>
+</svg>
+<header>
+  <svg class="emblema" viewBox="0 0 120 120" role="img" aria-label="Punilla Full"><use href="#pf-logo"/></svg>
+  <div class="wordmark anton">Punilla Full<small>TODO FRESCO, TODO JUNTO</small></div>
+</header>
+<main>
+  <!-- PANTALLA 1: FORM -->
+  <section id="s-form" class="screen activa">
+    <p class="eyebrow">Tarjeta Fundador · Apertura Sáb 1/8</p>
+    <h1 class="anton">Fijate qué <em>te tocó</em></h1>
+    <p class="bajada">Todos los Fundadores ganan algo. Cargá tus datos y jugá — tarda menos que elegir el fiambre.</p>
+    <span class="stock-chip" id="stock-chip" style="display:none">Cargando…</span>
+    <form id="form" novalidate>
+      <div>
+        <label for="nombre">Tu nombre</label>
+        <input id="nombre" type="text" autocomplete="name" placeholder="Nombre y apellido" required>
+        <p class="error" id="err-nombre">Poné tu nombre.</p>
+      </div>
+      <div>
+        <label for="tel">Tu WhatsApp</label>
+        <input id="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="3541 ..." required>
+        <p class="error" id="err-tel">Fijate el número — necesitamos un WhatsApp válido para mandarte el premio.</p>
+      </div>
+      <div>
+        <label for="barrio">Barrio <span class="opc">(si querés)</span></label>
+        <select id="barrio">
+          <option value="">Elegí tu barrio</option>
+          <option>Centro</option><option>La Toma</option><option>Villa Pan de Azúcar</option>
+          <option>Alto Mieres</option><option>Camping / Río</option><option>Otro / alrededores</option>
+        </select>
+      </div>
+      <div class="consent">
+        <input id="consent" type="checkbox" required>
+        <span>Acepto las <a href="/bases" target="_blank" rel="noopener">bases y condiciones</a> y que me escriban al WhatsApp con ofertas de PUNILLA FULL. (Ley 25.326 — tus datos no se comparten con nadie.)</span>
+      </div>
+      <p class="error" id="err-consent">Tenés que aceptar las bases para jugar.</p>
+      <button class="btn" type="submit" id="btn-jugar">Jugar mi premio</button>
+    </form>
+  </section>
+  <!-- PANTALLA 2: CONTADOR -->
+  <section id="s-contador" class="screen">
+    <p class="eyebrow">Ya sale, aguantá...</p>
+    <div class="ring-wrap">
+      <svg width="170" height="170"><circle class="ring-bg" cx="85" cy="85" r="75"/><circle class="ring-fg" id="ring" cx="85" cy="85" r="75"/></svg>
+      <div id="num" aria-live="polite">5</div>
+    </div>
+    <div id="flipper" class="anton">···</div>
+  </section>
+  <!-- PANTALLA 3: PREMIO -->
+  <section id="s-premio" class="screen">
+    <div class="chip-fundador anton" id="chip-fundador">Fundador #—</div>
+    <p class="yajugaste" id="yajugaste">Ya habías jugado — este es tu premio.</p>
+    <p class="grito" id="grito">¡Mirá esto!</p>
+    <div id="premio-nombre" class="anton">—</div>
+    <div class="plaquita">
+      <p class="lbl">Tu código — mostralo en caja</p>
+      <div id="codigo">—</div>
+      <p id="vigencia">—</p>
+    </div>
+    <button class="btn btn-negro" id="btn-wa">Mandarlo a mi WhatsApp</button>
+    <p class="caja-nota">Guardá esta pantalla o el mensaje de WhatsApp. Sin el código no hay canje, Fundador.</p>
+  </section>
+</main>
+<footer>
+  PUNILLA FULL · <strong>San Martín esq. Soberanía Nacional, Cosquín</strong> — antes del puente carretero · Todos los días hasta las 23 h
+</footer>
+<script>
+/* ============================================================
+   Frontend Fundador — cableado al servidor.
+   El premio, el N° de Fundador y el código SON RESPUESTA DEL SERVIDOR.
+   El contador de 5s es sólo puesta en escena (spec v2 §3).
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const RING_LEN = 471;
+const params = new URLSearchParams(location.search);
+const CANAL = (params.get('c') || '').slice(0,40) || null;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// Nombres teaser para el "girar" del suspenso (cosmético; el premio real lo decide el server).
+const TEASERS = [
+  '10% en fiambrería','2x1 en despensa','15% en verdulería',
+  '$ en carnicería','milanesas de apertura','regalo sorpresa'
+];
+
+let CONFIG = { waNumber:'5493541000000', quedan:null, total:null };
+
+function pantalla(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('activa'));
+  $(id).classList.add('activa');
+  window.scrollTo(0,0);
+}
+function fmtFecha(iso){
+  if(!iso) return null;
+  const d = new Date(iso);
+  if(isNaN(d)) return null;
+  return d.getUTCDate() + '/' + (d.getUTCMonth()+1);
+}
+
+async function loadConfig(){
+  try{
+    const r = await fetch('/api/config'); CONFIG = await r.json();
+  }catch(e){}
+  const chip = $('stock-chip');
+  if(CONFIG.quedan===null || CONFIG.quedan===undefined){ chip.style.display='none'; return; }
+  chip.style.display='inline-block';
+  chip.textContent = CONFIG.quedan>0 ? ('Quedan '+CONFIG.quedan+' premios hoy') : '¡Premios de hoy agotados!';
+}
+loadConfig();
+
+function limpiarErrores(){
+  ['err-nombre','err-tel','err-consent'].forEach(id=>$(id).classList.remove('visible'));
+}
+function digitos(s){ return (s||'').replace(/\D/g,''); }
+
+$('form').addEventListener('submit', e=>{
+  e.preventDefault();
+  limpiarErrores();
+  const nombre = $('nombre').value.trim();
+  const telD = digitos($('tel').value);
+  const okCon = $('consent').checked;
+  let ok = true;
+  if(nombre.length < 2){ $('err-nombre').classList.add('visible'); ok=false; }
+  if(telD.length < 10){ $('err-tel').classList.add('visible'); ok=false; }
+  if(!okCon){ $('err-consent').classList.add('visible'); ok=false; }
+  if(!ok) return;
+  jugar({
+    nombre,
+    telefono: $('tel').value.trim(),
+    barrio: $('barrio').value || null,
+    consent: true,
+    canal: CANAL
+  });
+});
+
+function runCountdown(){
+  return new Promise(resolve=>{
+    const ring = $('ring'), numEl = $('num'), flip = $('flipper');
+    if(reduced){ numEl.textContent=''; flip.textContent='···'; setTimeout(resolve, 500); return; }
+    let seg = 5;
+    numEl.textContent = seg;
+    ring.style.transition='none'; ring.style.strokeDashoffset = 0;
+    // reflow y arranca el vaciado del anillo en 5s
+    void ring.getBoundingClientRect();
+    requestAnimationFrame(()=>{ ring.style.transition='stroke-dashoffset 1s linear'; ring.style.strokeDashoffset = RING_LEN*(1/5); });
+    const flipI = setInterval(()=>{ flip.textContent = TEASERS[Math.floor(Math.random()*TEASERS.length)]; }, 130);
+    const tick = setInterval(()=>{
+      seg--;
+      if(seg>0){
+        numEl.textContent = seg;
+        ring.style.strokeDashoffset = RING_LEN*((5-seg)/5);
+      } else {
+        clearInterval(tick); clearInterval(flipI);
+        ring.style.strokeDashoffset = RING_LEN;
+        resolve();
+      }
+    }, 1000);
+  });
+}
+
+async function postFundador(payload){
+  const r = await fetch('/api/fundador', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  return r.json();
+}
+
+async function jugar(payload){
+  $('btn-jugar').disabled = true;
+  pantalla('s-contador');
+  const suspenso = runCountdown();
+  let data;
+  try{
+    data = await postFundador(payload);
+  }catch(err){
+    await suspenso;
+    $('btn-jugar').disabled = false;
+    pantalla('s-form');
+    $('err-tel').textContent = 'No pudimos conectar. Probá de nuevo en un ratito.';
+    $('err-tel').classList.add('visible');
+    return;
+  }
+  await suspenso; // garantiza el mínimo de suspenso
+  $('btn-jugar').disabled = false;
+
+  if(data && data.ok){
+    revelar(data.fundador, data.nuevo);
+    return;
+  }
+  if(data && data.agotado){
+    revelarAgotado();
+    return;
+  }
+  // errores de validación del servidor
+  pantalla('s-form');
+  const errs = (data && data.errores) || {};
+  if(errs.telefono){ $('err-tel').textContent = errs.telefono; $('err-tel').classList.add('visible'); }
+  if(errs.nombre){ $('err-nombre').classList.add('visible'); }
+  if(errs.consent){ $('err-consent').classList.add('visible'); }
+  if(!errs.telefono && !errs.nombre && !errs.consent){
+    $('err-tel').textContent = 'Algo falló. Probá de nuevo.'; $('err-tel').classList.add('visible');
+  }
+}
+
+function revelar(f, nuevo){
+  $('chip-fundador').textContent = 'Fundador #' + f.numero;
+  $('yajugaste').style.display = nuevo===false ? 'inline-block' : 'none';
+  $('grito').textContent = nuevo===false ? 'Tu premio sigue en pie' : '¡Mirá esto!';
+  $('premio-nombre').textContent = f.premio;
+  $('codigo').textContent = f.codigo;
+  const fecha = fmtFecha(f.vence_el);
+  const esHoy = (f.vigencia === 'HOY') || (f.vigencia_dias === 0);
+  $('vigencia').textContent = esHoy
+    ? 'Vale HOY nomás · una sola vez'
+    : (fecha ? ('Vale hasta el ' + fecha + ' · una sola vez')
+             : ('Vale por ' + f.vigencia + ' · una sola vez'));
+
+  const wa = (CONFIG.waNumber||'5493541000000').replace(/\D/g,'');
+  const txt = encodeURIComponent(
+    '¡Gané en PUNILLA FULL! 🎟️ Soy Fundador #'+f.numero+'. Mi premio: '+f.premio+'. Código: '+f.codigo
+  );
+  $('btn-wa').onclick = ()=> window.open('https://wa.me/'+wa+'?text='+txt, '_blank');
+
+  pantalla('s-premio');
+  papelitos();
+}
+
+function revelarAgotado(){
+  $('chip-fundador').textContent = 'Fundador';
+  $('yajugaste').style.display='none';
+  $('grito').textContent = 'Uy...';
+  $('premio-nombre').textContent = 'Se agotaron por hoy';
+  $('premio-nombre').style.fontSize = '2.2rem';
+  const p = document.querySelector('.plaquita'); if(p) p.style.display='none';
+  $('btn-wa').textContent = 'Seguinos en WhatsApp';
+  const wa = (CONFIG.waNumber||'5493541000000').replace(/\D/g,'');
+  $('btn-wa').onclick = ()=> window.open('https://wa.me/'+wa, '_blank');
+  pantalla('s-premio');
+}
+
+function papelitos(){
+  if(reduced) return;
+  const cols = ['#FFD11A','#D62820','#1A1714','#FFF6DD'];
+  for(let i=0;i<26;i++){
+    const c=document.createElement('div');
+    c.className='conf';
+    c.style.left=Math.random()*100+'vw';
+    c.style.background=cols[i%4];
+    c.style.animationDelay=(Math.random()*.5)+'s';
+    document.body.appendChild(c);
+    setTimeout(()=>c.remove(),2600);
+  }
+}
+</script>
+</body>
+</html>

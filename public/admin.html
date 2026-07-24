@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Punilla Full — Panel de canje</title>
+<style>
+  :root{--amarillo:#FFD11A;--rojo:#D62820;--rojo-osc:#A8160F;--negro:#1A1714;--crema:#FFF6DD;--verde:#2E7D32;}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:Archivo,system-ui,Arial,sans-serif;background:var(--crema);color:var(--negro);max-width:640px;margin:0 auto;padding:16px;min-height:100dvh}
+  h1{font-size:1.3rem;margin-bottom:2px}
+  .sub{font-size:.8rem;color:#7a726a;margin-bottom:14px}
+  .card{background:#fff;border:2px solid var(--negro);border-radius:10px;padding:14px;margin-bottom:14px}
+  label{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px}
+  input{width:100%;padding:12px;font-size:1.05rem;border:2px solid var(--negro);border-radius:7px;font-family:inherit;font-weight:600}
+  input#code{font-size:1.5rem;letter-spacing:.12em;text-transform:uppercase;text-align:center}
+  button{font-family:inherit;font-weight:800;border:2px solid var(--negro);border-radius:8px;padding:12px 14px;cursor:pointer;font-size:1rem}
+  .b-rojo{background:var(--rojo);color:#fff}
+  .b-verde{background:var(--verde);color:#fff}
+  .b-negro{background:var(--negro);color:var(--amarillo)}
+  .b-ghost{background:#fff}
+  .row{display:flex;gap:8px;flex-wrap:wrap}
+  .row>*{flex:1}
+  table{width:100%;border-collapse:collapse;font-size:.82rem;margin-top:8px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid #e5ddc9;vertical-align:top}
+  th{font-size:.66rem;text-transform:uppercase;letter-spacing:.08em;color:#7a726a}
+  .pill{display:inline-block;font-size:.66rem;font-weight:800;padding:2px 7px;border-radius:20px}
+  .pill.ok{background:#d7f0d7;color:#1c5e1c}
+  .pill.no{background:#ffe0dd;color:var(--rojo-osc)}
+  .msg{padding:12px;border-radius:8px;font-weight:700;margin-top:10px;display:none}
+  .msg.ok{display:block;background:#d7f0d7;color:#1c5e1c;border:2px solid var(--verde)}
+  .msg.err{display:block;background:#ffe0dd;color:var(--rojo-osc);border:2px solid var(--rojo)}
+  .msg.warn{display:block;background:#fff3cf;color:#7a5c00;border:2px solid var(--amarillo)}
+  .stockgrid{display:grid;grid-template-columns:1fr auto;gap:4px 10px;font-size:.85rem}
+  .stockgrid .n{font-weight:800;text-align:right}
+  .muted{color:#7a726a;font-size:.78rem}
+  .hide{display:none}
+  .big{font-size:1.6rem;font-weight:800;font-family:Archivo}
+  .flex{display:flex;justify-content:space-between;align-items:center;gap:8px}
+</style>
+</head>
+<body>
+  <h1>Panel de canje · Punilla Full</h1>
+  <div class="sub">Fundadores — buscá o escaneá el código, verificá el premio y marcalo canjeado.</div>
+
+  <!-- LOGIN -->
+  <div class="card" id="login">
+    <label for="key">Clave de acceso</label>
+    <div class="row">
+      <input id="key" type="password" placeholder="clave del panel" autocomplete="off">
+      <button class="b-negro" style="flex:0 0 auto" onclick="entrar()">Entrar</button>
+    </div>
+    <div class="msg err" id="login-err">Clave incorrecta.</div>
+  </div>
+
+  <div id="app" class="hide">
+    <!-- CANJE POR CÓDIGO -->
+    <div class="card">
+      <label for="code">Código en caja</label>
+      <input id="code" placeholder="PF-XXXX" autocomplete="off" enterkeyhint="search">
+      <div class="row" style="margin-top:10px">
+        <button class="b-ghost" onclick="buscarCodigo()">Ver premio</button>
+        <button class="b-verde" onclick="canjear()">Marcar canjeado</button>
+      </div>
+      <div class="msg" id="canje-msg"></div>
+    </div>
+
+    <!-- BÚSQUEDA -->
+    <div class="card">
+      <div class="flex" style="margin-bottom:8px">
+        <label style="margin:0">Buscar Fundadores</label>
+        <button class="b-ghost" style="flex:0 0 auto;padding:8px 10px" onclick="exportCsv()">⬇ CSV</button>
+      </div>
+      <input id="q" placeholder="código, nombre o teléfono" oninput="debouncedBuscar()">
+      <div id="lista"></div>
+    </div>
+
+    <!-- STOCK -->
+    <div class="card">
+      <div class="flex" style="margin-bottom:8px">
+        <label style="margin:0">Stock de premios</label>
+        <button class="b-ghost" style="flex:0 0 auto;padding:8px 10px" onclick="cargarStock()">↻</button>
+      </div>
+      <div class="stockgrid" id="stock"></div>
+      <div class="muted" id="stock-total" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+<script>
+let KEY = '';
+const $ = id => document.getElementById(id);
+
+function headers(){ return { 'Content-Type':'application/json', 'x-admin-key': KEY }; }
+
+async function entrar(){
+  KEY = $('key').value.trim();
+  const r = await fetch('/api/admin/premios', { headers: headers() });
+  if(r.status === 401){ $('login-err').style.display='block'; return; }
+  try{ localStorage.setItem('pf_admin_key', KEY); }catch(e){}
+  $('login').classList.add('hide');
+  $('app').classList.remove('hide');
+  cargarStock(); buscar();
+}
+// auto-login si ya entró antes en este dispositivo
+try{
+  const k = localStorage.getItem('pf_admin_key');
+  if(k){ $('key').value = k; entrar(); }
+}catch(e){}
+
+function msg(el, tipo, html){ el.className = 'msg ' + tipo; el.innerHTML = html; }
+
+async function buscarCodigo(){
+  const code = $('code').value.trim();
+  if(!code){ return; }
+  const r = await fetch('/api/admin/fundadores?q=' + encodeURIComponent(code), { headers: headers() });
+  const rows = await r.json();
+  const f = rows.find(x => (x.codigo||'').toUpperCase() === code.toUpperCase()) || rows[0];
+  if(!f){ msg($('canje-msg'),'err','No se encontró ningún código así.'); return; }
+  const canjeado = !!f.canjeado_at;
+  msg($('canje-msg'), canjeado?'warn':'ok',
+    '<div class="big">'+f.premio_nombre+'</div>'+
+    'Fundador #'+f.numero+' · '+(f.nombre||'—')+'<br>'+
+    'Vence: '+ (f.vence_el? new Date(f.vence_el).toLocaleDateString('es-AR') : (f.vigencia_texto||'—')) +
+    (canjeado ? '<br><b>⚠ YA FUE CANJEADO</b> ('+new Date(f.canjeado_at).toLocaleString('es-AR')+')' : '<br><b>Sin canjear ✓</b>')
+  );
+}
+
+async function canjear(){
+  const code = $('code').value.trim();
+  if(!code){ msg($('canje-msg'),'err','Escribí el código.'); return; }
+  if(!confirm('¿Marcar '+code.toUpperCase()+' como CANJEADO? Es irreversible.')) return;
+  const r = await fetch('/api/admin/canje', { method:'POST', headers: headers(), body: JSON.stringify({ codigo: code }) });
+  const d = await r.json();
+  if(r.ok && d.ok){
+    msg($('canje-msg'),'ok','✓ Canjeado: <b>'+d.fundador.premio_nombre+'</b> — Fundador #'+d.fundador.numero+' ('+(d.fundador.nombre||'—')+')');
+    $('code').value=''; buscar();
+  } else if(r.status===409){
+    msg($('canje-msg'),'warn','⚠ Ese código YA estaba canjeado ('+new Date(d.fundador.canjeado_at).toLocaleString('es-AR')+'). No se descuenta de nuevo.');
+  } else if(r.status===404){
+    msg($('canje-msg'),'err','No existe ese código.');
+  } else {
+    msg($('canje-msg'),'err','Error al canjear.');
+  }
+}
+
+let tBuscar;
+function debouncedBuscar(){ clearTimeout(tBuscar); tBuscar=setTimeout(buscar, 250); }
+async function buscar(){
+  const q = $('q') ? $('q').value.trim() : '';
+  const r = await fetch('/api/admin/fundadores?q=' + encodeURIComponent(q), { headers: headers() });
+  const rows = await r.json();
+  if(!Array.isArray(rows)){ return; }
+  let html = '<table><thead><tr><th>#</th><th>Nombre</th><th>Premio</th><th>Código</th><th>Estado</th></tr></thead><tbody>';
+  for(const f of rows){
+    html += '<tr><td>'+f.numero+'</td><td>'+(f.nombre||'—')+'<br><span class="muted">'+(f.telefono_norm||'')+'</span></td>'+
+      '<td>'+f.premio_nombre+'</td><td><b>'+f.codigo+'</b></td>'+
+      '<td>'+(f.canjeado_at?'<span class="pill no">canjeado</span>':'<span class="pill ok">activo</span>')+'</td></tr>';
+  }
+  html += '</tbody></table>';
+  if(!rows.length) html = '<div class="muted" style="padding:8px">Sin resultados.</div>';
+  $('lista').innerHTML = html;
+}
+
+async function cargarStock(){
+  const r = await fetch('/api/admin/premios', { headers: headers() });
+  const rows = await r.json();
+  if(!Array.isArray(rows)) return;
+  let html=''; let totalRest=0, totalIni=0;
+  for(const p of rows){
+    const rest = p.stock_restante===null ? '∞' : p.stock_restante;
+    if(p.stock_restante!==null && !p.es_consuelo){ totalRest+=p.stock_restante; totalIni+=(p.stock_inicial||0); }
+    html += '<div>'+p.nombre+(p.es_consuelo?' <span class="muted">(consuelo)</span>':'')+'</div><div class="n">'+rest+'</div>';
+  }
+  $('stock').innerHTML = html;
+  $('stock-total').textContent = 'Premios premium restantes: '+totalRest+' de '+totalIni;
+}
+
+function exportCsv(){
+  window.location = '/api/admin/export.csv?k=' + encodeURIComponent(KEY);
+}
+</script>
+</body>
+</html>
