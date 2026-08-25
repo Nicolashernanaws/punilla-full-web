@@ -94,9 +94,17 @@
   .comercio:has(input:checked) .marca::after{background:var(--rojo)}
   .comercio:has(input:focus-visible){outline:3px solid var(--rojo);outline-offset:2px}
 
-  .consent{display:flex;gap:10px;align-items:flex-start;font-size:.78rem;font-weight:600;line-height:1.35}
-  .consent input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--rojo)}
-  .consent a{color:var(--rojo-oscuro)}
+  .consent-nota{font-size:.74rem;line-height:1.4;opacity:.75;text-align:center;margin:8px 0 0}
+  .consent-nota a{color:var(--rojo-oscuro);font-weight:700}
+  /* "Somos de acá": va DENTRO del pie, que es negro, asi que el crema contrasta
+     y el bloque se lee como una nota aparte y no como mas letra chica. */
+  .de-aca{
+    background:var(--crema);color:var(--negro);
+    border-radius:14px;padding:16px 18px;margin:14px auto 0;max-width:420px;
+    font-size:.84rem;line-height:1.55;text-align:center;
+  }
+  .de-aca strong{color:var(--negro)}
+  .de-aca .firma{display:block;margin-top:8px;font-weight:800}
 
   .btn{
     font-family:'Anton';font-style:italic;text-transform:uppercase;
@@ -286,13 +294,16 @@
         </div>
         <p class="error" id="err-comercio">Elegí dónde compraste.</p>
       </div>
-      <label class="consent">
-        <input id="consent" type="checkbox" required>
-        <span>Acepto las <a href="/bases-sorteo" target="_blank" rel="noopener">bases del sorteo</a> y que me escriban al WhatsApp. (Ley 25.326 — tus datos no se comparten con nadie.)</span>
-      </label>
-      <p class="error" id="err-consent">Tenés que aceptar las bases para participar.</p>
       <p class="error" id="err-server"></p>
       <button class="btn" type="submit" id="btn-anotar">Anotarme</button>
+      <!-- Sin checkbox: un tilde obligatorio es un paso mas entre el vecino y
+           anotarse, y nadie lo lee. La aceptacion queda igual de probada —se
+           guarda `consent = true` con el timestamp del registro— y ademas el
+           texto se lee, que es mas de lo que pasaba con el tilde. -->
+      <p class="consent-nota">
+        Al anotarte aceptás <a href="/bases-sorteo" target="_blank" rel="noopener">las bases</a>
+        y que te escribamos si ganás.
+      </p>
     </form>
 
     <div class="premios">
@@ -357,6 +368,16 @@
 <footer>
   PUNILLA FULL · <strong>San Martín esq. Soberanía Nacional, Cosquín</strong> — antes del puente carretero<br>
   Se sortea <strong id="pie-cuando">el jueves 27 a las 21</strong>, en vivo desde el local.
+
+  <!-- Cierra la pagina sin pedir nada. Sin CTA a proposito: el unico boton de
+       esta pantalla tiene que ser "Anotarme". -->
+  <div class="de-aca">
+    <strong>Somos de acá.</strong>
+    Punilla Full, Tomato y Lucy somos tres negocios de Cosquín. Los premios los ponemos
+    nosotros, y la plata del sorteo queda en el pueblo.
+    <span class="firma">— Nico y Jesi</span>
+  </div>
+
   <span class="legal">
     <a href="/bases-sorteo">Bases del sorteo</a> · Tres negocios, un solo sorteo.
     Promoción no patrocinada, avalada ni administrada por Instagram o Meta.
@@ -417,7 +438,7 @@ try {
 } catch (e) {}
 
 /* ── Envío ─────────────────────────────────────────────────────────────── */
-const ERRORES = ['err-nombre','err-tel','err-comercio','err-consent','err-server'];
+const ERRORES = ['err-nombre','err-tel','err-comercio','err-server'];
 function limpiarErrores(){ ERRORES.forEach(id => $(id).classList.remove('visible')); }
 function comercioElegido(){
   const el = document.querySelector('input[name=comercio]:checked');
@@ -431,13 +452,11 @@ $('form').addEventListener('submit', async (e) => {
   const nombre = $('nombre').value.trim();
   const telefono = $('tel').value.trim();
   const comercio = comercioElegido();
-  const consent = $('consent').checked;
 
   let ok = true;
   if (nombre.length < 2){ $('err-nombre').classList.add('visible'); ok = false; }
   if (telefono.replace(/\D/g,'').length < 10){ $('err-tel').classList.add('visible'); ok = false; }
   if (!comercio){ $('err-comercio').classList.add('visible'); ok = false; }
-  if (!consent){ $('err-consent').classList.add('visible'); ok = false; }
   if (!ok) return;
 
   const btn = $('btn-anotar');
@@ -448,6 +467,10 @@ $('form').addEventListener('submit', async (e) => {
     const r = await fetch('/api/sorteo/registro', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
+      // `consent:true` se sigue mandando aunque ya no haya tilde: apretar
+      // "Anotarme" con el aviso a la vista ES la aceptación, y queda guardada
+      // con el timestamp del registro. Sacar el campo del payload seria perder
+      // la prueba de que acepto.
       body: JSON.stringify({ nombre, telefono, comercio, consent:true })
     });
     const data = await r.json();

@@ -282,9 +282,26 @@ test('POST de registro', async (t) => {
     );
   });
 
-  await t.test('sin aceptar las bases devuelve 400', async () => {
+  // 🔴 EL TILDE DE "ACEPTO LAS BASES" SE SACO (25/8). Era un paso mas entre el
+  // vecino y anotarse, y nadie lo leia. Ahora el aviso esta debajo del boton, a
+  // la vista, y apretar "Anotarme" ES la aceptacion.
+  //
+  // Lo que NO se puede perder es la PRUEBA: tiene que quedar guardado que
+  // acepto, y cuando. Estos dos tests fijan eso.
+  await t.test('sin el campo consent igual se anota, y queda guardado que acepto', async () => {
     const db = baseFalsa();
-    await assert.rejects(() => registrar(datos({ consent: false }), db), (e) => e.status === 400);
+    const sinCampo = datos();
+    delete sinCampo.consent;
+    await registrar(sinCampo, db);
+    const fila = [...db._tablas.participantes.values()][0];
+    assert.equal(fila.consent, true, 'apretar el boton es la aceptacion');
+    assert.ok(fila.creado_en instanceof Date, 'y queda con su timestamp');
+  });
+
+  await t.test('un false explicito si se respeta', async () => {
+    const db = baseFalsa();
+    await registrar(datos({ consent: false }), db);
+    assert.equal([...db._tablas.participantes.values()][0].consent, false);
   });
 
   await t.test('sin nombre devuelve 400', async () => {

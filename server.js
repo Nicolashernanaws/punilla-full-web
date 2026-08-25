@@ -152,7 +152,9 @@ app.post('/api/sorteo/registro', rateLimit(20, 60000), async (req, res) => {
       nombre: b.nombre,
       telefonoRaw: b.telefono,
       comercio: b.comercio,
-      consent: b.consent === true || b.consent === 'true' || b.consent === 1,
+      // Sin tilde en el formulario, el campo puede no venir. `undefined` NO es
+      // rechazo: apretar "Anotarme" con el aviso a la vista es la aceptacion.
+      consent: b.consent === false || b.consent === 'false' ? false : true,
       ip: req.ip,
       userAgent: req.get('user-agent') || '',
     });
