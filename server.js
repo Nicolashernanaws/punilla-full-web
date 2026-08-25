@@ -3,6 +3,13 @@ const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
 const { play, stockRestante, totalFundadores } = require('./lib/engine');
+const {
+  registrar: registrarSorteo,
+  participantes: participantesSorteo,
+  marcarCompartio,
+  sortear: sortearPremios,
+} = require('./lib/sorteo-engine');
+const { ventanaAbierta, armarPadron, CIERRE, SORTEO_TEXTO } = require('./lib/sorteo');
 const { query } = require('./db/db');
 const { bootstrap } = require('./db/bootstrap');
 
@@ -119,6 +126,119 @@ app.post('/api/fundador', rateLimit(8, 60000), async (req, res) => {
   }
 });
 
+// ---------- API sorteo ----------
+// PUNILLA FULL SORTEO: carga del 24/8 al jueves 27/8 20:00, se sortea a las 21.
+// Convive con Fundadores; son campañas distintas sobre la misma base.
+
+app.get('/api/sorteo/config', async (_req, res) => {
+  const abierto = ventanaAbierta(new Date());
+  try {
+    const r = await query('SELECT COUNT(*)::int AS c FROM sorteo_participante');
+    res.json({ abierto, cierre: CIERRE.toISOString(), sorteoTexto: SORTEO_TEXTO, anotados: r.rows[0].c });
+  } catch (e) {
+    // El contador es decorativo: si la base no contesta, la landing tiene que
+    // seguir dejando anotarse igual.
+    res.json({ abierto, cierre: CIERRE.toISOString(), sorteoTexto: SORTEO_TEXTO, anotados: null });
+  }
+});
+
+// Rate limit más holgado que el de Fundadores: acá la gracia es anotarse varias
+// veces, así que 20 por minuto por IP corta al bot sin molestar a la familia
+// que se anota junta desde el wifi del local.
+app.post('/api/sorteo/registro', rateLimit(20, 60000), async (req, res) => {
+  const b = req.body || {};
+  try {
+    const r = await registrarSorteo({
+      nombre: b.nombre,
+      telefonoRaw: b.telefono,
+      comercio: b.comercio,
+      consent: b.consent === true || b.consent === 'true' || b.consent === 1,
+      ip: req.ip,
+      userAgent: req.get('user-agent') || '',
+    });
+    res.json({ ok: true, ...r });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ ok: false, error: e.mensajeUsuario, code: e.message });
+    console.error('[/api/sorteo/registro] error', e);
+    res.status(500).json({
+      ok: false,
+      error: 'Se nos cayó el sistema un segundo. Probá de nuevo, y si sigue igual avisanos en la caja.',
+    });
+  }
+});
+
+// ---------- API admin del sorteo ----------
+app.get('/api/sorteo/admin/padron', requireAdmin, async (_req, res) => {
+  const gente = await participantesSorteo();
+  const padron = armarPadron(gente);
+  res.json({
+    anotados: gente.length,
+    participando: gente.filter((p) => p.participa).length,
+    pendientes_de_historia: gente.filter((p) => !p.compartio).length,
+    padron_size: padron.length,
+    gente: gente.map((p) => ({
+      telefono: p.telefono_norm,
+      nombre: p.nombre,
+      chances: p.chances,
+      multiplicador: p.multiplicador,
+      compartio: p.compartio,
+      via: p.compartio_via,
+      participa: p.participa,
+      comercios: [...new Set(p.registros.map((r) => r.comercio))],
+    })),
+  });
+});
+
+app.post('/api/sorteo/admin/compartio', requireAdmin, async (req, res) => {
+  const b = req.body || {};
+  try {
+    const r = await marcarCompartio(b.telefono, b.via, b.valor !== false);
+    res.json({ ok: true, participante: r });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ ok: false, error: e.mensajeUsuario });
+    throw e;
+  }
+});
+
+app.post('/api/sorteo/admin/sortear', requireAdmin, async (req, res) => {
+  const b = req.body || {};
+  try {
+    res.json({ ok: true, ...(await sortearPremios({ semilla: b.semilla, forzar: b.forzar === true })) });
+  } catch (e) {
+    if (e.status) return res.status(e.status).json({ ok: false, error: e.mensajeUsuario });
+    throw e;
+  }
+});
+
+app.get('/api/sorteo/admin/export.csv', requireAdmin, async (_req, res) => {
+  const gente = await participantesSorteo();
+  const cols = ['telefono', 'nombre', 'chances', 'multiplicador', 'compartio', 'via', 'participa', 'comercios'];
+  const esc = (v) => {
+    const s = v === null || v === undefined ? '' : String(v);
+    return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  };
+  const lines = [cols.join(',')];
+  for (const p of gente) {
+    lines.push(
+      [
+        p.telefono_norm,
+        p.nombre,
+        p.chances,
+        p.multiplicador,
+        p.compartio,
+        p.compartio_via,
+        p.participa,
+        [...new Set(p.registros.map((r) => r.comercio))].join(' '),
+      ]
+        .map(esc)
+        .join(',')
+    );
+  }
+  res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+  res.setHeader('Content-Disposition', 'attachment; filename="sorteo.csv"');
+  res.send('﻿' + lines.join('\n')); // BOM para Excel
+});
+
 // ---------- API admin ----------
 app.get('/api/admin/premios', requireAdmin, async (_req, res) => {
   const r = await query(
@@ -197,6 +317,10 @@ app.get('/api/admin/export.csv', requireAdmin, async (_req, res) => {
 // ---------- páginas ----------
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));
 app.get('/fundador', (_req, res) => res.sendFile(path.join(PUBLIC, 'fundador.html')));
+// Sin .html: son las URLs del QR del cartel y de la bio de las tres cuentas.
+// Una vez impresas no se pueden cambiar, así que tienen que ser cortas y estables.
+app.get('/sorteo', (_req, res) => res.sendFile(path.join(PUBLIC, 'sorteo.html')));
+app.get('/bases-sorteo', (_req, res) => res.sendFile(path.join(PUBLIC, 'bases-sorteo.html')));
 app.get('/admin', (_req, res) => res.sendFile(path.join(PUBLIC, 'admin.html')));
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 

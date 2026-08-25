@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>PUNILLA FULL SORTEO — anotate</title>
+<meta name="description" content="Comprás, escaneás y ya estás jugando. Sin ticket, sin papeles. 4 premios, 4 ganadores. Se sortea el jueves 27 a las 21, en vivo.">
+<meta name="theme-color" content="#FFD11A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;800&display=swap" rel="stylesheet">
+<style>
+  /* Mismos tokens que /fundador: es la misma marca y el mismo vecino. */
+  :root{
+    --amarillo:#FFD11A;
+    --rojo:#D62820;
+    --rojo-oscuro:#A8160F;
+    --negro:#1A1714;
+    --crema:#FFF6DD;
+    --blanco:#FFFFFF;
+    --verde:#1E6B3A;   /* sólo para el estado "ya estás jugando" */
+    --gris:#7a726a;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:'Archivo',Arial,sans-serif;
+    background:var(--crema);
+    color:var(--negro);
+    display:flex;flex-direction:column;
+    max-width:480px;margin:0 auto;
+    min-height:100dvh;
+  }
+  .anton{font-family:'Anton','Archivo Black',Impact,sans-serif;font-style:italic;text-transform:uppercase;letter-spacing:.01em}
+  .eyebrow{font-weight:800;text-transform:uppercase;letter-spacing:.18em;font-size:.7rem}
+
+  header{
+    background:var(--amarillo);
+    border-bottom:4px solid var(--negro);
+    padding:14px 20px;
+    display:flex;align-items:center;gap:12px;
+  }
+  .emblema{width:46px;height:46px;flex:none;display:block}
+  .wordmark{
+    font-size:1.7rem;color:var(--rojo);line-height:.95;
+    -webkit-text-stroke:1.5px var(--negro);
+    text-shadow:2px 2px 0 var(--negro);
+  }
+  .wordmark small{display:block;font-size:.55rem;color:var(--negro);-webkit-text-stroke:0;text-shadow:none;font-family:'Archivo';font-style:normal;font-weight:800;letter-spacing:.25em}
+
+  main{flex:1;display:flex;flex-direction:column}
+  .screen{display:none;flex:1;flex-direction:column;padding:26px 20px 24px}
+  .screen.activa{display:flex}
+
+  /* ── Pantalla 1: anotarse ────────────────────────────────────────────── */
+  #s-form .eyebrow{color:var(--rojo-oscuro);margin-bottom:8px}
+  h1{font-size:2.5rem;line-height:.95;margin-bottom:12px}
+  h1 em{font-style:italic;color:var(--rojo)}
+  .bajada{font-weight:600;font-size:.95rem;line-height:1.45;margin-bottom:16px}
+  .reloj{
+    display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;
+    background:var(--negro);color:var(--amarillo);
+    padding:9px 13px;border-radius:4px;margin-bottom:20px;
+    font-weight:800;font-size:.74rem;letter-spacing:.1em;text-transform:uppercase;
+  }
+  .reloj b{font-family:'Anton';font-style:italic;font-size:1.05rem;letter-spacing:.02em}
+  .reloj .anotados{color:var(--crema);opacity:.75;letter-spacing:.06em;font-size:.68rem}
+
+  form{display:flex;flex-direction:column;gap:16px}
+  label{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;display:block;margin-bottom:6px}
+  input[type=text],input[type=tel]{
+    width:100%;padding:14px;font-size:1.05rem;font-family:'Archivo';font-weight:600;
+    border:3px solid var(--negro);border-radius:6px;background:var(--blanco);color:var(--negro);
+  }
+  input:focus-visible,button:focus-visible,a:focus-visible{outline:3px solid var(--rojo);outline-offset:2px}
+
+  /* Tres botonazos en vez de un desplegable: lo usa gente grande, parada en
+     la caja, con una mano ocupada. Un <select> ahí es una trampa. */
+  .comercios{display:grid;gap:9px}
+  .comercio{
+    display:flex;align-items:center;gap:12px;
+    border:3px solid var(--negro);border-radius:6px;background:var(--blanco);
+    padding:13px 14px;cursor:pointer;text-align:left;font-family:'Archivo';
+  }
+  .comercio input{position:absolute;opacity:0;width:0;height:0}
+  .comercio .marca{
+    width:24px;height:24px;flex:none;border:3px solid var(--negro);border-radius:50%;
+    display:grid;place-items:center;
+  }
+  .comercio .marca::after{content:'';width:11px;height:11px;border-radius:50%;background:transparent}
+  .comercio .txt{font-weight:800;font-size:1rem;line-height:1.2}
+  .comercio .txt span{display:block;font-weight:600;font-size:.72rem;color:var(--gris)}
+  .comercio:has(input:checked){background:var(--amarillo);box-shadow:3px 3px 0 var(--negro)}
+  .comercio:has(input:checked) .marca::after{background:var(--rojo)}
+  .comercio:has(input:focus-visible){outline:3px solid var(--rojo);outline-offset:2px}
+
+  .consent{display:flex;gap:10px;align-items:flex-start;font-size:.78rem;font-weight:600;line-height:1.35}
+  .consent input{width:20px;height:20px;flex:none;margin-top:1px;accent-color:var(--rojo)}
+  .consent a{color:var(--rojo-oscuro)}
+
+  .btn{
+    font-family:'Anton';font-style:italic;text-transform:uppercase;
+    font-size:1.5rem;letter-spacing:.03em;
+    background:var(--rojo);color:var(--blanco);
+    border:3px solid var(--negro);border-radius:8px;
+    box-shadow:0 5px 0 var(--negro);
+    padding:16px;cursor:pointer;width:100%;
+    transition:transform .08s, box-shadow .08s;
+  }
+  .btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--negro)}
+  .btn[disabled]{opacity:.6;cursor:progress}
+  .btn-negro{background:var(--negro);color:var(--amarillo)}
+  .btn-linea{background:transparent;color:var(--negro);box-shadow:none;font-size:1.1rem}
+
+  .error{color:var(--rojo-oscuro);font-weight:800;font-size:.78rem;display:none;margin-top:-8px}
+  .error.visible{display:block}
+
+  .premios{margin-top:26px;border-top:3px solid var(--negro);padding-top:16px}
+  .premios h2{font-size:1.35rem;margin-bottom:10px}
+  .premios ol{list-style:none;display:grid;gap:7px}
+  .premios li{display:flex;gap:11px;align-items:baseline;font-weight:600;font-size:.9rem}
+  .premios .puesto{
+    font-family:'Anton';font-style:italic;color:var(--rojo);font-size:1.1rem;
+    flex:none;width:1.5em;
+  }
+
+  /* ── Pantalla 2: la tarjeta de sellos ────────────────────────────────── */
+  /* El elemento con el que se queda el vecino. No es un contador: es la
+     tarjeta del almacén, un sello por chance, que es exactamente lo que la
+     mecánica premia (volver y anotarse otra vez). */
+  #s-listo{gap:18px}
+  .estado{
+    border:3px solid var(--negro);border-radius:8px;padding:13px 15px;
+    display:flex;gap:12px;align-items:flex-start;
+  }
+  .estado.falta{background:var(--rojo);color:var(--blanco)}
+  .estado.jugando{background:var(--verde);color:var(--blanco)}
+  .estado .icono{font-family:'Anton';font-style:italic;font-size:1.5rem;line-height:1;flex:none}
+  .estado .t{font-family:'Anton';font-style:italic;text-transform:uppercase;font-size:1.15rem;line-height:1.05}
+  .estado .d{font-weight:600;font-size:.8rem;line-height:1.4;margin-top:3px}
+
+  .tarjeta{
+    background:var(--blanco);
+    border:3px solid var(--negro);
+    border-radius:10px;
+    box-shadow:5px 5px 0 var(--negro);
+    padding:16px 15px 15px;
+  }
+  .tarjeta .cab{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:3px}
+  .tarjeta .cab .quien{font-weight:800;font-size:.72rem;text-transform:uppercase;letter-spacing:.14em;color:var(--gris);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cuenta{display:flex;align-items:baseline;gap:9px;margin-bottom:12px}
+  .cuenta .n{font-family:'Anton';font-style:italic;font-size:3.4rem;line-height:.85;color:var(--rojo);
+    -webkit-text-stroke:2px var(--negro);text-shadow:3px 3px 0 var(--negro)}
+  .cuenta .lbl{font-family:'Anton';font-style:italic;text-transform:uppercase;font-size:1.05rem;line-height:1.05}
+  .x2{
+    display:inline-block;background:var(--negro);color:var(--amarillo);
+    font-family:'Anton';font-style:italic;font-size:.85rem;
+    padding:3px 9px;border-radius:3px;margin-left:2px;transform:rotate(-3deg);
+  }
+
+  .sellos{
+    display:flex;flex-wrap:wrap;gap:7px;
+    border-top:2px dashed var(--negro);padding-top:13px;
+  }
+  .sello{
+    width:34px;height:34px;flex:none;border-radius:50%;
+    border:2.5px solid var(--rojo);color:var(--rojo);
+    display:grid;place-items:center;
+    font-family:'Anton';font-style:italic;font-size:.62rem;line-height:.9;text-align:center;
+    opacity:.9;
+  }
+  /* Cada sello cae con una inclinación distinta: es un sello de goma, no un
+     ícono. La rotación sale del índice, no al azar, para que no baile al
+     re-renderizar. */
+  .sello:nth-child(3n){transform:rotate(-7deg)}
+  .sello:nth-child(3n+1){transform:rotate(5deg)}
+  .sello:nth-child(3n+2){transform:rotate(-2deg)}
+  .sello.mas{border-style:dashed;border-color:var(--negro);color:var(--negro);font-size:.7rem}
+  @media (prefers-reduced-motion: no-preference){
+    .sello.nuevo{animation:sellar .3s cubic-bezier(.2,1.6,.4,1) both}
+  }
+  @keyframes sellar{from{transform:scale(2.4) rotate(-12deg);opacity:0}to{opacity:.9}}
+
+  .par{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:13px}
+  .casillero{
+    border:2.5px solid var(--negro);border-radius:6px;padding:9px 10px;
+    font-weight:800;font-size:.78rem;line-height:1.2;
+    display:flex;align-items:center;gap:8px;background:#fffdf5;
+  }
+  .casillero .tick{
+    width:19px;height:19px;flex:none;border:2.5px solid var(--negro);border-radius:3px;
+    display:grid;place-items:center;font-size:.75rem;color:transparent;font-weight:800;
+  }
+  .casillero.si{background:var(--amarillo)}
+  .casillero.si .tick{color:var(--negro);background:var(--blanco)}
+  .par-nota{font-weight:600;font-size:.75rem;color:var(--gris);margin-top:8px;line-height:1.4}
+
+  .paso{border:3px solid var(--negro);border-radius:8px;padding:15px;background:var(--amarillo)}
+  .paso h2{font-size:1.3rem;line-height:1.05;margin-bottom:8px}
+  .paso p{font-weight:600;font-size:.85rem;line-height:1.45;margin-bottom:10px}
+  .paso .cuentas{
+    font-family:'Anton';font-style:italic;font-size:.95rem;
+    background:var(--negro);color:var(--amarillo);
+    padding:9px 11px;border-radius:5px;margin-bottom:11px;
+    display:flex;flex-wrap:wrap;gap:4px 12px;
+  }
+  .paso .sin-insta{font-weight:600;font-size:.78rem;line-height:1.4;margin:0;padding-top:9px;border-top:2px solid var(--negro)}
+
+  footer{
+    background:var(--negro);color:var(--crema);
+    font-size:.72rem;line-height:1.5;padding:16px 20px 22px;text-align:center;
+  }
+  footer strong{color:var(--amarillo)}
+  footer a{color:var(--amarillo)}
+  .legal{display:block;margin-top:8px;opacity:.65;font-size:.66rem}
+
+  .cerrado{text-align:center;padding:40px 10px}
+  .cerrado h1{font-size:2.1rem;margin-bottom:12px}
+  .cerrado p{font-weight:600;font-size:.95rem;line-height:1.5}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="pf-logo" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="57" fill="#FFD11A" stroke="#1A1714" stroke-width="5"/>
+    <circle cx="60" cy="60" r="47" fill="none" stroke="#1A1714" stroke-width="2" stroke-dasharray="3 4"/>
+    <path d="M14 76 L34 44 L48 62 L64 34 L82 66 L96 50 L106 76 Z" fill="#1A1714"/>
+    <path d="M48 62 L64 34 L74 50 Z" fill="#A8160F"/>
+    <path d="M60 104 C46 92 74 82 60 72 C48 64 72 58 60 50" fill="none" stroke="#D62820" stroke-width="6" stroke-linecap="round"/>
+    <g stroke="#1A1714" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M40 84 h30 l4 -16 h-40"/>
+      <circle cx="46" cy="96" r="4" fill="#1A1714"/>
+      <circle cx="66" cy="96" r="4" fill="#1A1714"/>
+      <path d="M34 68 h6"/>
+    </g>
+  </symbol>
+</svg>
+
+<header>
+  <svg class="emblema" viewBox="0 0 120 120" role="img" aria-label="Punilla Full"><use href="#pf-logo"/></svg>
+  <div class="wordmark anton">Punilla Full<small>TODO FRESCO, TODO JUNTO</small></div>
+</header>
+
+<main>
+  <!-- ── PANTALLA 1 ────────────────────────────────────────────────────── -->
+  <section id="s-form" class="screen activa">
+    <p class="eyebrow">Punilla Full Sorteo</p>
+    <h1 class="anton">Comprás, escaneás<br><em>y ya estás jugando.</em></h1>
+    <p class="bajada">Sin ticket, sin papeles, sin anotar números. Ponés tu nombre, tu WhatsApp y dónde compraste.</p>
+
+    <div class="reloj">
+      <span>Cierra</span> <b id="cierre-txt">el jueves 20:00</b>
+      <span class="anotados" id="anotados"></span>
+    </div>
+
+    <form id="form" novalidate>
+      <div>
+        <label for="nombre">Tu nombre</label>
+        <input id="nombre" type="text" autocomplete="name" placeholder="Nombre y apellido" required>
+        <p class="error" id="err-nombre">Poné tu nombre.</p>
+      </div>
+      <div>
+        <label for="tel">Tu WhatsApp</label>
+        <input id="tel" type="tel" inputmode="numeric" autocomplete="tel" placeholder="3541 ..." required>
+        <p class="error" id="err-tel">Fijate el número — lo usamos para avisarte si ganás.</p>
+      </div>
+      <div>
+        <label id="lbl-comercio">¿Dónde compraste?</label>
+        <div class="comercios" role="radiogroup" aria-labelledby="lbl-comercio">
+          <label class="comercio">
+            <input type="radio" name="comercio" value="punilla">
+            <span class="marca" aria-hidden="true"></span>
+            <span class="txt">Punilla Full<span>San Martín esq. Soberanía Nacional</span></span>
+          </label>
+          <label class="comercio">
+            <input type="radio" name="comercio" value="tomato">
+            <span class="marca" aria-hidden="true"></span>
+            <span class="txt">Tomato<span>San Martín 643</span></span>
+          </label>
+          <label class="comercio">
+            <input type="radio" name="comercio" value="lucy">
+            <span class="marca" aria-hidden="true"></span>
+            <span class="txt">Lucy<span>Camperas, online</span></span>
+          </label>
+        </div>
+        <p class="error" id="err-comercio">Elegí dónde compraste.</p>
+      </div>
+      <label class="consent">
+        <input id="consent" type="checkbox" required>
+        <span>Acepto las <a href="/bases-sorteo" target="_blank" rel="noopener">bases del sorteo</a> y que me escriban al WhatsApp. (Ley 25.326 — tus datos no se comparten con nadie.)</span>
+      </label>
+      <p class="error" id="err-consent">Tenés que aceptar las bases para participar.</p>
+      <p class="error" id="err-server"></p>
+      <button class="btn" type="submit" id="btn-anotar">Anotarme</button>
+    </form>
+
+    <div class="premios">
+      <h2 class="anton">4 premios, 4 ganadores</h2>
+      <ol>
+        <li><span class="puesto anton">1°</span> Una campera de Lucy</li>
+        <li><span class="puesto anton">2°</span> Cena para dos en Tomato</li>
+        <li><span class="puesto anton">3°</span> Una compra de $25.000 en Punilla Full</li>
+        <li><span class="puesto anton">4°</span> Otra compra de $25.000 en Punilla Full</li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ── PANTALLA 2 ────────────────────────────────────────────────────── -->
+  <section id="s-listo" class="screen">
+    <div class="estado falta" id="estado">
+      <span class="icono" aria-hidden="true">!</span>
+      <div>
+        <div class="t" id="estado-t">Te falta un paso</div>
+        <div class="d" id="estado-d">Compartí la placa en tu historia y ahí sí entrás al sorteo.</div>
+      </div>
+    </div>
+
+    <div class="tarjeta">
+      <div class="cab"><span class="quien" id="quien">—</span></div>
+      <div class="cuenta">
+        <span class="n anton" id="chances">0</span>
+        <span class="lbl anton">chances<span class="x2" id="x2" hidden>×2 activo</span></span>
+      </div>
+      <div class="sellos" id="sellos" aria-label="Un sello por chance"></div>
+
+      <div class="par">
+        <div class="casillero" id="cas-punilla"><span class="tick" aria-hidden="true">✓</span> Punilla Full</div>
+        <div class="casillero" id="cas-tomato"><span class="tick" aria-hidden="true">✓</span> Tomato</div>
+      </div>
+      <p class="par-nota" id="par-nota">Anotate en los dos y te duplicamos las chances. Están a media cuadra.</p>
+    </div>
+
+    <div class="paso">
+      <h2 class="anton">Compartí y quedás adentro</h2>
+      <p>Subí la placa del sorteo a tu historia etiquetando a las tres cuentas. Te la damos hecha en el local y en el perfil.</p>
+      <div class="cuentas anton">
+        <span>@punilla_fullcosquin</span><span>@tomato.cosquin_</span><span>@by_lucy3</span>
+      </div>
+      <p class="sin-insta">¿No usás Instagram? Decinos en la caja y te anotamos nosotros. Vale igual.</p>
+    </div>
+
+    <button class="btn btn-negro" id="btn-otra">Anotarme otra vez</button>
+    <p class="par-nota" style="text-align:center;margin-top:0">Cada vez que comprás podés volver a anotarte. Más veces, más chances.</p>
+  </section>
+
+  <!-- ── PANTALLA 3: cerrado ───────────────────────────────────────────── -->
+  <section id="s-cerrado" class="screen">
+    <div class="cerrado">
+      <h1 class="anton">La carga ya cerró</h1>
+      <p>El sorteo se hace <strong id="cerrado-cuando">el jueves 27 a las 21</strong>, en vivo desde el local. Si te anotaste, mirá tu WhatsApp.</p>
+      <p style="margin-top:14px"><a href="/" style="color:var(--rojo-oscuro);font-weight:800">Ir a Punilla Full</a></p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  PUNILLA FULL · <strong>San Martín esq. Soberanía Nacional, Cosquín</strong> — antes del puente carretero<br>
+  Se sortea <strong id="pie-cuando">el jueves 27 a las 21</strong>, en vivo desde el local.
+  <span class="legal">
+    <a href="/bases-sorteo">Bases del sorteo</a> · Tres negocios, un solo sorteo.
+    Promoción no patrocinada, avalada ni administrada por Instagram o Meta.
+  </span>
+</footer>
+
+<script>
+/* ============================================================
+   PUNILLA FULL SORTEO — frontend.
+   Las chances SIEMPRE salen del servidor. Acá no se calcula nada:
+   si el número de la pantalla y el padrón del sorteo no coinciden,
+   eso se descubre el jueves a las 21, en vivo y delante de todos.
+   ============================================================ */
+const $ = (id) => document.getElementById(id);
+const MAX_SELLOS = 24; // más que esto no entra en pantalla ni se lee
+const GUARDADO = 'punilla-sorteo';
+
+function pantalla(id){
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('activa'));
+  $(id).classList.add('activa');
+  window.scrollTo(0,0);
+}
+
+/* ── Config: reloj de cierre y cuánta gente se anotó ───────────────────── */
+fetch('/api/sorteo/config')
+  .then(r => r.json())
+  .then(c => {
+    if (c.sorteoTexto) {
+      $('pie-cuando').textContent = c.sorteoTexto;
+      $('cerrado-cuando').textContent = c.sorteoTexto;
+    }
+    if (c.cierre) $('cierre-txt').textContent = textoCierre(new Date(c.cierre));
+    // El contador es escasez REAL o no se muestra: si la base no contestó,
+    // no se inventa un número.
+    if (typeof c.anotados === 'number' && c.anotados > 0) {
+      $('anotados').textContent = '· ya se anotaron ' + c.anotados;
+    }
+    if (!c.abierto) pantalla('s-cerrado');
+  })
+  .catch(() => {});
+
+function textoCierre(d){
+  if (isNaN(d)) return 'el jueves 20:00';
+  const dias = ['el domingo','el lunes','el martes','el miércoles','el jueves','el viernes','el sábado'];
+  const fmt = new Intl.DateTimeFormat('es-AR', {
+    timeZone:'America/Argentina/Cordoba', weekday:'long', hour:'2-digit', minute:'2-digit', hour12:false
+  }).formatToParts(d);
+  const parte = (t) => (fmt.find(p => p.type === t) || {}).value || '';
+  const dia = parte('weekday');
+  return (dia ? 'el ' + dia : dias[d.getDay()]) + ' ' + parte('hour') + ':' + parte('minute');
+}
+
+/* ── Prellenado: el que vuelve a anotarse no reescribe todo ────────────── */
+try {
+  const g = JSON.parse(localStorage.getItem(GUARDADO) || 'null');
+  if (g && g.nombre) $('nombre').value = g.nombre;
+  if (g && g.telefono) $('tel').value = g.telefono;
+} catch (e) {}
+
+/* ── Envío ─────────────────────────────────────────────────────────────── */
+const ERRORES = ['err-nombre','err-tel','err-comercio','err-consent','err-server'];
+function limpiarErrores(){ ERRORES.forEach(id => $(id).classList.remove('visible')); }
+function comercioElegido(){
+  const el = document.querySelector('input[name=comercio]:checked');
+  return el ? el.value : null;
+}
+
+$('form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  limpiarErrores();
+
+  const nombre = $('nombre').value.trim();
+  const telefono = $('tel').value.trim();
+  const comercio = comercioElegido();
+  const consent = $('consent').checked;
+
+  let ok = true;
+  if (nombre.length < 2){ $('err-nombre').classList.add('visible'); ok = false; }
+  if (telefono.replace(/\D/g,'').length < 10){ $('err-tel').classList.add('visible'); ok = false; }
+  if (!comercio){ $('err-comercio').classList.add('visible'); ok = false; }
+  if (!consent){ $('err-consent').classList.add('visible'); ok = false; }
+  if (!ok) return;
+
+  const btn = $('btn-anotar');
+  btn.disabled = true;
+  btn.textContent = 'Anotando...';
+
+  try {
+    const r = await fetch('/api/sorteo/registro', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ nombre, telefono, comercio, consent:true })
+    });
+    const data = await r.json();
+
+    if (!r.ok || !data.ok){
+      if (data && data.code === 'CERRADO'){ pantalla('s-cerrado'); return; }
+      $('err-server').textContent = (data && data.error) || 'No pudimos anotarte. Probá de nuevo.';
+      $('err-server').classList.add('visible');
+      return;
+    }
+
+    try { localStorage.setItem(GUARDADO, JSON.stringify({ nombre, telefono })); } catch (e) {}
+    mostrarTarjeta(data);
+  } catch (err) {
+    $('err-server').textContent = 'Se cortó la conexión. Fijate el wifi o los datos y probá de nuevo.';
+    $('err-server').classList.add('visible');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Anotarme';
+  }
+});
+
+/* ── La tarjeta de sellos ──────────────────────────────────────────────── */
+function mostrarTarjeta(d){
+  $('quien').textContent = d.nombre || '';
+  $('chances').textContent = d.chances;
+  $('x2').hidden = !d.multiplicador;
+
+  // Un sello por chance. Se corta en MAX_SELLOS y el último dice cuántos faltan:
+  // 60 puntitos no se leen, y el número grande ya está arriba.
+  const cont = $('sellos');
+  cont.textContent = '';
+  const visibles = Math.min(d.chances, MAX_SELLOS);
+  for (let i = 0; i < visibles; i++){
+    const s = document.createElement('span');
+    s.className = 'sello' + (i === visibles - 1 ? ' nuevo' : '');
+    s.textContent = 'PF';
+    cont.appendChild(s);
+  }
+  if (d.chances > MAX_SELLOS){
+    const mas = document.createElement('span');
+    mas.className = 'sello mas';
+    mas.textContent = '+' + (d.chances - MAX_SELLOS);
+    cont.appendChild(mas);
+  }
+
+  $('cas-punilla').classList.toggle('si', !!d.sellos.punilla);
+  $('cas-tomato').classList.toggle('si', !!d.sellos.tomato);
+  $('par-nota').textContent = d.multiplicador
+    ? 'Tenés el ×2: cada chance vale doble.'
+    : 'Anotate en los dos y te duplicamos las chances. Están a media cuadra.';
+
+  // Honestidad: tener chances no es estar jugando. Mientras no compartas,
+  // la pantalla lo dice con todas las letras.
+  const est = $('estado');
+  if (d.participa){
+    est.className = 'estado jugando';
+    est.querySelector('.icono').textContent = '✓';
+    $('estado-t').textContent = 'Estás jugando';
+    $('estado-d').textContent = 'Ya te verificamos la historia. Si ganás, te escribimos al WhatsApp.';
+  } else {
+    est.className = 'estado falta';
+    est.querySelector('.icono').textContent = '!';
+    $('estado-t').textContent = 'Te falta un paso';
+    $('estado-d').textContent = 'Compartí la placa en tu historia etiquetando a las tres cuentas. Recién ahí entrás al sorteo.';
+  }
+
+  pantalla('s-listo');
+}
+
+$('btn-otra').addEventListener('click', () => {
+  document.querySelectorAll('input[name=comercio]').forEach(i => { i.checked = false; });
+  pantalla('s-form');
+  $('nombre').focus({ preventScroll:true });
+});
+</script>
+</body>
+</html>
