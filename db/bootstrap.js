@@ -13,6 +13,11 @@ async function bootstrap() {
   const schema = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await pool.query(schema);
 
+  // El Parte Diario va en su propio archivo: es un módulo aparte y no comparte
+  // ninguna tabla con la raspadita ni con Fundadores. Igual de idempotente.
+  const parte = fs.readFileSync(path.join(__dirname, 'parte-schema.sql'), 'utf8');
+  await pool.query(parte);
+
   const { rows } = await pool.query('SELECT COUNT(*)::int AS c FROM premios');
   if (rows[0].c === 0) {
     const cfg = JSON.parse(

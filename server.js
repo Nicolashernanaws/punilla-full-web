@@ -12,6 +12,7 @@ const {
 const { ventanaAbierta, armarPadron, CIERRE, SORTEO_TEXTO } = require('./lib/sorteo');
 const { query } = require('./db/db');
 const { bootstrap } = require('./db/bootstrap');
+const { crearRutasParte } = require('./lib/parte-rutas');
 
 const app = express();
 app.set('trust proxy', 1); // Railway está detrás de proxy
@@ -315,6 +316,24 @@ app.get('/api/admin/export.csv', requireAdmin, async (_req, res) => {
   res.setHeader('Content-Disposition', 'attachment; filename="fundadores.csv"');
   res.send('﻿' + lines.join('\n')); // BOM para Excel
 });
+
+// ---------- Parte Diario ----------
+//
+// Módulo autocontenido bajo /parte: checklists de turno con rastro auditable.
+// Vive acá y no en el POS porque el POS es hoy el bloqueante de ARCA y no se le
+// mete trabajo que no sea fiscal. No toca la raspadita ni Fundadores.
+app.use(
+  '/parte',
+  crearRutasParte({
+    secret: process.env.CODE_SECRET || 'dev-secret-inseguro',
+    adminKey: ADMIN_KEY,
+    // En local no hay HTTPS: con Secure la cookie no viajaría y no se podría
+    // probar nada.
+    secure: process.env.NODE_ENV === 'production',
+  }),
+);
+app.get('/parte', (_req, res) => res.sendFile(path.join(PUBLIC, 'parte.html')));
+app.get('/parte/admin', (_req, res) => res.sendFile(path.join(PUBLIC, 'parte-admin.html')));
 
 // ---------- páginas ----------
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));

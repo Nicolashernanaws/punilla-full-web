@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parte Diario · Tablero</title>
+<style>
+  /* Lo que pidió Nico: VER LOS MOVIMIENTOS GUARDADOS. El tablero no es un
+     resumen bonito — el dato que importa es la línea de tiempo, porque ahí se
+     ve si alguien tildó doce cosas seguidas a las 15:58, que es la señal de que
+     la lista se completa de memoria al final del turno en vez de durante. */
+  :root {
+    --bg: #14120f; --panel: #1d1a16; --borde: #332e27; --txt: #f2ede4;
+    --suave: #a89e90; --ok: #4caf72; --amb: #d9a441; --mal: #d05c4a;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--txt);
+         font: 15px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+  header { padding: 1rem 1.2rem; border-bottom: 1px solid var(--borde);
+           display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; }
+  h1 { font-size: 1.15rem; margin: 0; letter-spacing: .01em; }
+  input, button, select { font: inherit; background: var(--panel); color: var(--txt);
+           border: 1px solid var(--borde); border-radius: 6px; padding: .45rem .6rem; }
+  button { cursor: pointer; }
+  main { padding: 1.2rem; max-width: 1100px; margin: 0 auto; }
+  .grid { display: grid; gap: .9rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+  .card { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: .9rem; }
+  .card h3 { margin: 0 0 .2rem; font-size: 1rem; }
+  .quien { color: var(--suave); font-size: .85rem; }
+  .prog { font-size: 1.8rem; font-variant-numeric: tabular-nums; margin: .35rem 0 .15rem; }
+  /* Verde cerró todo · ámbar cerró con pendientes · rojo turno sin cerrar. */
+  .sello { display: inline-block; padding: .12rem .5rem; border-radius: 999px;
+           font-size: .78rem; font-weight: 600; }
+  .sello.ok  { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
+  .sello.pend{ background: color-mix(in srgb, var(--amb) 22%, transparent); color: var(--amb); }
+  .sello.no  { background: color-mix(in srgb, var(--mal) 22%, transparent); color: var(--mal); }
+  details { margin-top: .6rem; }
+  summary { cursor: pointer; color: var(--suave); font-size: .85rem; }
+  .campos { display: grid; gap: .2rem; margin: .5rem 0 0; font-size: .88rem; }
+  .campos div { display: flex; justify-content: space-between; gap: .5rem; }
+  .campos b { font-variant-numeric: tabular-nums; }
+  .nota { margin-top: .5rem; font-size: .88rem; color: var(--suave); font-style: italic; }
+  h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; }
+  .linea { border-left: 2px solid var(--borde); margin-left: .5rem; padding-left: .9rem; }
+  .ev { display: grid; grid-template-columns: 3.4rem 6.5rem 1fr; gap: .6rem;
+        padding: .22rem 0; font-size: .87rem; border-bottom: 1px solid #241f1a; }
+  .ev time { color: var(--suave); font-variant-numeric: tabular-nums; }
+  .ev .p { color: var(--suave); }
+  /* La ráfaga: 5 o más eventos en 2 minutos. Es el hallazgo que justifica la
+     línea de tiempo, así que se marca sola en vez de dejar que se busque. */
+  .ev.rafaga { background: color-mix(in srgb, var(--amb) 10%, transparent); }
+  .ev.destilde { opacity: .7; }
+  .aviso { color: var(--suave); font-size: .9rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+  th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--borde); }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Parte Diario · Tablero</h1>
+  <input type="date" id="fecha">
+  <input type="password" id="key" placeholder="ADMIN_KEY" style="width:11rem">
+  <button id="ver">Ver</button>
+  <span class="aviso" id="estado"></span>
+</header>
+
+<main>
+  <div class="grid" id="puestos"></div>
+
+  <h2>Línea de tiempo del día</h2>
+  <p class="aviso">
+    Cada movimiento con hora y persona. Lo resaltado son ráfagas —cinco o más
+    tildes en dos minutos—: eso es la lista completándose de memoria al final del
+    turno, no durante.
+  </p>
+  <div class="linea" id="linea"></div>
+
+  <h2>Últimos 30 días</h2>
+  <div id="rango"></div>
+</main>
+
+<script>
+const NOMBRES = {
+  enc_m: 'Encargado mañana', enc_t: 'Encargado tarde',
+  fiam_m: 'Fiambrería mañana', fiam_t: 'Fiambrería tarde', prod: 'Producción',
+};
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+// La clave queda sólo en esta pestaña: no en localStorage, para que no sobreviva
+// a que alguien se lleve la compu.
+const key = () => $('#key').value.trim();
+
+async function pedir(url) {
+  const r = await fetch(url, { headers: { 'x-admin-key': key() } });
+  if (r.status === 401) throw new Error('ADMIN_KEY incorrecta');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+function sello(cierre) {
+  if (!cierre) return '<span class="sello no">sin cerrar</span>';
+  if (cierre.estado === 'ok') return '<span class="sello ok">cerró todo</span>';
+  return '<span class="sello pend">cerró con pendientes</span>';
+}
+
+function tarjeta(p) {
+  const campos = Object.entries(p.campos || {});
+  return `<div class="card">
+    <h3>${NOMBRES[p.puesto] || p.puesto}</h3>
+    <div class="quien">${p.cierre ? esc(p.cierre.by) + ' · ' + esc(p.cierre.at) : 'todavía nadie cerró'}</div>
+    <div class="prog">${p.hechas}<span class="quien"> tildadas</span></div>
+    ${sello(p.cierre)}
+    ${p.cierre && p.cierre.detalle ? `<div class="nota">Pendiente: ${esc(p.cierre.detalle)}</div>` : ''}
+    ${campos.length ? `<details open><summary>${campos.length} campos cargados</summary>
+      <div class="campos">${campos.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
+    </details>` : '<div class="quien" style="margin-top:.5rem">sin campos cargados</div>'}
+    ${p.nota ? `<div class="nota">“${esc(p.nota)}”</div>` : ''}
+  </div>`;
+}
+
+function hora(ts) {
+  return new Date(ts).toLocaleTimeString('es-AR', {
+    timeZone: 'America/Argentina/Cordoba', hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+}
+
+/** Marca los eventos que caen en una ráfaga de 5+ en 2 minutos. */
+function marcarRafagas(evs) {
+  const VENTANA = 2 * 60 * 1000, MINIMO = 5;
+  const enRafaga = new Set();
+  const tildes = evs.map((e, i) => ({ i, t: Date.parse(e.ts), tipo: e.tipo })).filter((x) => x.tipo === 'tilde');
+  for (let a = 0; a < tildes.length; a++) {
+    let b = a;
+    while (b + 1 < tildes.length && tildes[b + 1].t - tildes[a].t <= VENTANA) b++;
+    if (b - a + 1 >= MINIMO) for (let k = a; k <= b; k++) enRafaga.add(tildes[k].i);
+  }
+  return enRafaga;
+}
+
+async function cargar() {
+  const f = $('#fecha').value;
+  $('#estado').textContent = 'cargando…';
+  try {
+    const d = await pedir('/parte/admin/api/dia?fecha=' + encodeURIComponent(f));
+    $('#fecha').value = d.fecha;
+    $('#puestos').innerHTML = d.puestos.map(tarjeta).join('');
+
+    const rafagas = marcarRafagas(d.eventos);
+    $('#linea').innerHTML = d.eventos.length
+      ? d.eventos.map((e, i) => `<div class="ev ${e.tipo} ${rafagas.has(i) ? 'rafaga' : ''}">
+          <time>${hora(e.ts)}</time>
+          <span class="p">${esc(e.nombre || '—')}</span>
+          <span>${esc(e.tipo)}${e.item_id ? ' · ' + esc(e.item_id) : ''}${e.valor ? ' = ' + esc(e.valor) : ''}
+            <span class="quien">(${esc(NOMBRES[e.puesto] || e.puesto)})</span></span>
+        </div>`).join('')
+      : '<p class="aviso">Todavía no hay movimientos este día.</p>';
+
+    const r = await pedir('/parte/admin/api/rango');
+    const porDia = new Map();
+    for (const x of r.dias) {
+      if (!porDia.has(x.fecha)) porDia.set(x.fecha, {});
+      porDia.get(x.fecha)[x.puesto] = x;
+    }
+    const puestos = Object.keys(NOMBRES);
+    $('#rango').innerHTML = `<table><thead><tr><th>Día</th>${
+      puestos.map((p) => `<th class="num">${NOMBRES[p].split(' ')[0]}</th>`).join('')
+    }</tr></thead><tbody>${[...porDia.entries()].map(([dia, v]) => `<tr><td>${esc(String(dia).slice(0, 10))}</td>${
+      puestos.map((p) => {
+        const x = v[p];
+        if (!x) return '<td class="num quien">—</td>';
+        const c = x.cierre === 'ok' ? 'ok' : x.cierre === 'pend' ? 'amb' : 'mal';
+        return `<td class="num" style="color:var(--${c})">${x.hechas}</td>`;
+      }).join('')
+    }</tr>`).join('')}</tbody></table>`;
+    $('#estado').textContent = '';
+  } catch (e) {
+    $('#estado').textContent = e.message;
+  }
+}
+
+$('#ver').addEventListener('click', cargar);
+$('#key').addEventListener('keydown', (e) => e.key === 'Enter' && cargar());
+// Arranca en la fecha operativa de hoy, que la pone el servidor.
+fetch('/parte/admin/api/dia', { headers: { 'x-admin-key': '' } })
+  .catch(() => {})
+  .finally(() => { $('#fecha').value = new Date().toISOString().slice(0, 10); });
+</script>
+</body>
+</html>
