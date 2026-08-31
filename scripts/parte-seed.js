@@ -24,11 +24,20 @@ const PERSONAS = [
   { nombre: 'Vanesa', puesto: 'enc_m' },
   { nombre: 'Julián', puesto: 'enc_t' },
   { nombre: 'Vanesa', puesto: 'enc_t' },
+  // Fiambrería: las tres rotan entre los dos turnos (Nico, 31/8). "Bren O." y
+  // "Bren R." van con la inicial del apellido porque el nombre solo no las
+  // distingue, y el parte vale justamente porque dice QUIÉN hizo cada cosa.
+  { nombre: 'Abril', puesto: 'fiam_m' },
+  { nombre: 'Bren O.', puesto: 'fiam_m' },
+  { nombre: 'Bren R.', puesto: 'fiam_m' },
+  { nombre: 'Abril', puesto: 'fiam_t' },
+  { nombre: 'Bren O.', puesto: 'fiam_t' },
+  { nombre: 'Bren R.', puesto: 'fiam_t' },
 ];
 
 // Los que faltan definir. Se listan para que no se olviden, pero no se crean:
 // dar de alta a "a definir" sería repartir un PIN que no es de nadie.
-const A_DEFINIR = ['fiam_m', 'fiam_t', 'prod'];
+const A_DEFINIR = ['prod'];
 
 /** PIN de 4 dígitos con aleatoriedad criptográfica, no Math.random. */
 function pinAlAzar() {
