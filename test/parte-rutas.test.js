@@ -100,3 +100,42 @@ test('una sesión de un puesto no sirve para otro', () => {
   const t = crearToken({ personaId: 1, puesto: 'fiam_m', nombre: 'X' }, SECRET);
   assert.equal(leerToken(t, SECRET).puesto, 'fiam_m');
 });
+
+// ── El freno compartido (medido en producción el 30/8) ──────────────────────
+//
+// 🔴 EL CONTADOR EN MEMORIA NO ALCANZABA. Railway corre más de una réplica y
+// cada una tiene su propio Map: el límite efectivo era 5 × réplicas, y esa
+// cantidad cambia sin avisar. Se vio en prod — 6 intentos seguidos dieron
+// 401,401,401,429,401,429: el round-robin repartía los golpes entre dos.
+const { huella, FRENO_MAX, FRENO_MINUTOS } = require('../lib/parte-rutas');
+
+test('🔴 el freno de verdad cuenta en la base, no en memoria', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /SELECT COUNT\(\*\)[\s\S]{0,120}login_fallido/);
+  // Y se chequea ANTES de comparar el PIN, no después.
+  assert.match(rutas, /frenadoEnBase\(puesto, req\.ip\)[\s\S]{0,200}SELECT id, nombre, pin_hash/);
+});
+
+test('🔴 se cuenta por puesto Y huella de IP, no sólo por puesto', () => {
+  // Si fuera sólo por puesto, cualquiera podría dejar a Julián sin poder entrar
+  // tirando PINs al azar desde afuera.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /WHERE tipo = 'login_fallido' AND puesto = \$1 AND valor = \$2/);
+});
+
+test('la IP no se guarda en claro', () => {
+  const h = huella('190.55.1.2');
+  assert.equal(h.length, 12);
+  assert.equal(h.includes('190'), false);
+  assert.notEqual(h, huella('190.55.1.3'));
+});
+
+test('el intento fallido queda anotado en la línea de tiempo', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /INSERT INTO parte_evento[\s\S]{0,80}'login_fallido'/);
+});
+
+test('el freno son 5 intentos en 15 minutos', () => {
+  assert.equal(FRENO_MAX, 5);
+  assert.equal(FRENO_MINUTOS, 15);
+});
