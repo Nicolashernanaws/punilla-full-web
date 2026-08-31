@@ -1,0 +1,1285 @@
+<title>Parte Diario Punilla Full</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F2EBD8;
+  --surface:#FFF8E7;
+  --surface-2:#FBF2DC;
+  --ink:#1A1714;
+  --ink-2:#4A4237;
+  --ink-3:#8A8071;
+  --line:#DED2B4;
+  --line-soft:#E9DFC6;
+  --amarillo:#F0B800;
+  --amarillo-tint:#FFF0BE;
+  --rojo:#C9241C;
+  --rojo-tint:#FBDDD9;
+  --verde:#2C6E4B;
+  --verde-tint:#DAEBDF;
+  --ambar:#9A6207;
+  --shadow:0 1px 0 rgba(26,23,20,.05), 0 2px 10px rgba(26,23,20,.06);
+  --radius:10px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#15130E;
+    --surface:#201D15;
+    --surface-2:#2A261C;
+    --ink:#F2EBD8;
+    --ink-2:#C9BFA6;
+    --ink-3:#928871;
+    --line:#3A3427;
+    --line-soft:#302B20;
+    --amarillo:#FFD24D;
+    --amarillo-tint:#3A3116;
+    --rojo:#FF7A6B;
+    --rojo-tint:#3B211D;
+    --verde:#6FC392;
+    --verde-tint:#1D2F24;
+    --ambar:#E0A73C;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 2px 12px rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#15130E;
+  --surface:#201D15;
+  --surface-2:#2A261C;
+  --ink:#F2EBD8;
+  --ink-2:#C9BFA6;
+  --ink-3:#928871;
+  --line:#3A3427;
+  --line-soft:#302B20;
+  --amarillo:#FFD24D;
+  --amarillo-tint:#3A3116;
+  --rojo:#FF7A6B;
+  --rojo-tint:#3B211D;
+  --verde:#6FC392;
+  --verde-tint:#1D2F24;
+  --ambar:#E0A73C;
+  --shadow:0 1px 0 rgba(0,0,0,.3), 0 2px 12px rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Public Sans",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:16px;
+  line-height:1.45;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{font-family:"Archivo","Public Sans",sans-serif;margin:0;text-wrap:balance;letter-spacing:-.02em}
+button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+.wrap{max-width:760px;margin:0 auto;padding:0 14px 120px}
+
+/* ---------- header ---------- */
+header{
+  position:sticky;top:0;z-index:30;
+  background:var(--surface);
+  border-bottom:1px solid var(--line);
+}
+.hd{max-width:760px;margin:0 auto;padding:10px 14px 0;display:flex;align-items:center;gap:10px}
+.brandmark{
+  width:34px;height:34px;flex:none;border-radius:8px;
+  background:var(--amarillo);color:#1A1714;
+  display:grid;place-items:center;
+  font-family:"Archivo",sans-serif;font-weight:800;font-size:15px;letter-spacing:-.04em;
+}
+.brandtxt{min-width:0;flex:1}
+.brandtxt h1{font-size:16px;font-weight:800;line-height:1.1}
+.brandtxt .sub{font-size:11.5px;color:var(--ink-3);letter-spacing:.05em;text-transform:uppercase;font-weight:600}
+.whoami{
+  flex:none;border:1px solid var(--line);background:var(--surface-2);
+  border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.whoami:hover{border-color:var(--ink-3)}
+.whoami .dot{width:7px;height:7px;border-radius:99px;background:var(--rojo)}
+.whoami.set .dot{background:var(--verde)}
+
+.tabs{
+  max-width:760px;margin:0 auto;padding:9px 14px 9px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+}
+.tabs::-webkit-scrollbar{display:none}
+.tab{
+  flex:none;border:1px solid var(--line);background:transparent;
+  border-radius:8px;padding:7px 11px;cursor:pointer;text-align:left;
+  display:flex;flex-direction:column;gap:1px;min-width:104px;
+}
+.tab .t-n{font-family:"Archivo",sans-serif;font-weight:700;font-size:13px;letter-spacing:-.01em;white-space:nowrap}
+.tab .t-h{font-size:10.5px;color:var(--ink-3);font-weight:600}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--surface);border-color:var(--ink)}
+.tab[aria-selected="true"] .t-h{color:var(--surface-2);opacity:.75}
+.tab .t-bar{height:3px;border-radius:99px;background:var(--line);margin-top:4px;overflow:hidden}
+.tab .t-bar i{display:block;height:100%;background:var(--verde);width:0;transition:width .25s}
+.tab[aria-selected="true"] .t-bar{background:rgba(255,255,255,.22)}
+
+/* ---------- list head ---------- */
+.lhead{padding:20px 0 12px;display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.lhead .who{flex:1;min-width:200px}
+.lhead h2{font-size:26px;font-weight:800;line-height:1.05}
+.lhead .meta{font-size:13px;color:var(--ink-2);margin-top:3px}
+.lhead .meta b{color:var(--ink);font-weight:600}
+.pill{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  padding:3px 8px;border-radius:5px;
+}
+.pill.m{background:var(--amarillo-tint);color:var(--ambar)}
+.pill.t{background:var(--rojo-tint);color:var(--rojo)}
+.pill.x{background:var(--surface-2);color:var(--ink-2);border:1px solid var(--line)}
+
+.prog{width:100%;display:flex;align-items:center;gap:10px;margin-top:4px}
+.prog .track{flex:1;height:8px;border-radius:99px;background:var(--line-soft);overflow:hidden;border:1px solid var(--line)}
+.prog .track i{display:block;height:100%;background:var(--verde);width:0;transition:width .3s}
+.prog .n{font-size:13px;font-weight:700;color:var(--ink-2);white-space:nowrap}
+
+/* ---------- tasks ---------- */
+.blockname{
+  font-family:"Archivo",sans-serif;font-size:11px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-3);
+  margin:22px 0 8px;display:flex;align-items:center;gap:10px;
+}
+.blockname::after{content:"";flex:1;height:1px;background:var(--line)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.task{
+  display:flex;gap:12px;padding:12px 13px;
+  border-bottom:1px solid var(--line-soft);
+  cursor:pointer;position:relative;
+  -webkit-tap-highlight-color:transparent;
+}
+.task:last-child{border-bottom:0}
+.task.crit{background:linear-gradient(90deg,var(--rojo-tint) 0 3px,transparent 3px)}
+.task:hover{background:var(--surface-2)}
+.task.crit:hover{background:linear-gradient(90deg,var(--rojo) 0 3px,var(--surface-2) 3px)}
+.box{
+  flex:none;width:26px;height:26px;margin-top:1px;border-radius:7px;
+  border:2px solid var(--ink-3);background:transparent;
+  display:grid;place-items:center;transition:.12s;
+}
+.box svg{width:15px;height:15px;stroke:var(--surface);stroke-width:3.2;fill:none;opacity:0;stroke-linecap:round;stroke-linejoin:round}
+.task.done .box{background:var(--verde);border-color:var(--verde)}
+.task.done .box svg{opacity:1}
+.tbody{flex:1;min-width:0}
+.trow{display:flex;gap:8px;align-items:baseline}
+.thora{
+  flex:none;font-family:"IBM Plex Mono",monospace;font-size:11.5px;font-weight:600;
+  color:var(--ink-3);font-variant-numeric:tabular-nums;padding-top:2px;
+}
+.ttxt{font-size:15px;line-height:1.35;font-weight:500}
+.task.done .ttxt{color:var(--ink-3);text-decoration:line-through;text-decoration-color:var(--line)}
+.tdet{font-size:13px;color:var(--ink-2);margin-top:3px;line-height:1.4}
+.tdet em{color:var(--ink-2);font-style:italic}
+.tby{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--verde);margin-top:5px;font-weight:600}
+.critflag{
+  display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.08em;
+  color:var(--rojo);border:1px solid var(--rojo);border-radius:4px;
+  padding:0 4px;margin-left:6px;vertical-align:1.5px;
+}
+
+/* numeric fields */
+.field{display:flex;gap:12px;padding:11px 13px;border-bottom:1px solid var(--line-soft);align-items:center}
+.field:last-child{border-bottom:0}
+.field .flab{flex:1;font-size:14px;font-weight:500}
+.field .flab small{display:block;color:var(--ink-3);font-size:12px;font-weight:400}
+.field input{
+  flex:none;width:104px;padding:8px 10px;border-radius:8px;
+  border:1.5px solid var(--line);background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Mono",monospace;font-size:15px;font-weight:600;text-align:right;
+}
+.field input:focus{outline:2px solid var(--amarillo);outline-offset:1px;border-color:var(--amarillo)}
+.field input.filled{border-color:var(--verde);background:var(--verde-tint)}
+
+textarea.nota{
+  width:100%;min-height:88px;padding:11px 12px;border-radius:var(--radius);
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);
+  font:inherit;font-size:15px;resize:vertical;
+}
+textarea.nota:focus{outline:2px solid var(--amarillo);outline-offset:1px}
+
+
+.traspaso{
+  border:1px solid var(--line);border-left:4px solid var(--ambar);
+  background:var(--surface);border-radius:var(--radius);padding:13px 15px;margin:14px 0 4px;
+}
+.tsp-h{font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ambar);margin-bottom:7px}
+.tsp-n{font-size:14px;color:var(--ink-2);margin-bottom:8px}
+.tsp-n b{color:var(--ink);font-family:"IBM Plex Mono",monospace;font-weight:600}
+.tsp-l{margin:0;padding-left:17px;font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.tsp-l li{margin-bottom:3px}
+.tsp-l li.crit{color:var(--rojo);font-weight:600}
+.tsp-l li.mas{list-style:none;margin-left:-17px;color:var(--ink-3);font-size:12.5px;font-style:italic}
+.tsp-ok{margin:0;font-size:13.5px;color:var(--verde);font-weight:600}
+.tsp-v{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.tsp-nota{margin-top:11px;padding-top:10px;border-top:1px solid var(--line-soft)}
+.tsp-nl{font-family:"Archivo",sans-serif;font-size:10px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:3px}
+.tsp-nota p{margin:0;font-size:14px;color:var(--ink);line-height:1.45;white-space:pre-wrap}
+
+/* ---------- callouts ---------- */
+.note{
+  border:1px solid var(--line);border-left:4px solid var(--amarillo);
+  background:var(--surface);border-radius:8px;padding:12px 14px;margin:14px 0;
+  font-size:14px;line-height:1.5;color:var(--ink-2);
+}
+.note.red{border-left-color:var(--rojo)}
+.note b{color:var(--ink);font-weight:700}
+.note .nt{
+  font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:800;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-3);display:block;margin-bottom:5px;
+}
+
+/* ---------- footer bar ---------- */
+.bar{
+  position:fixed;left:0;right:0;bottom:0;z-index:40;
+  background:var(--surface);border-top:1px solid var(--line);
+  padding:10px 14px calc(10px + env(safe-area-inset-bottom));
+}
+.bar .in{max-width:760px;margin:0 auto;display:flex;gap:8px;align-items:center}
+.btn{
+  border:1px solid var(--line);background:var(--surface-2);border-radius:9px;
+  padding:11px 14px;font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;
+  font-family:"Archivo",sans-serif;letter-spacing:-.01em;
+}
+.btn:hover{border-color:var(--ink-3)}
+.btn.pri{background:var(--ink);color:var(--surface);border-color:var(--ink);flex:1 1 auto;min-width:0;text-align:center}
+.btn.pri:hover{opacity:.88}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.sync{font-size:11px;color:var(--ink-3);font-weight:600;font-family:"IBM Plex Mono",monospace;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:0 1 auto}
+.sync.off{color:var(--rojo)}
+
+/* ---------- modal ---------- */
+.scrim{position:fixed;inset:0;background:rgba(26,23,20,.55);z-index:50;display:grid;place-items:center;padding:16px}
+.modal{
+  background:var(--surface);border:1px solid var(--line);border-radius:14px;
+  max-width:480px;width:100%;max-height:86vh;overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.3);
+}
+.modal .mh{padding:18px 18px 6px}
+.modal h3{font-size:19px;font-weight:800}
+.modal .mh p{margin:5px 0 0;font-size:13.5px;color:var(--ink-2)}
+.modal .mb{padding:14px 18px 18px;display:flex;flex-direction:column;gap:8px}
+.pick{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:1px solid var(--line);background:var(--surface-2);border-radius:9px;
+  padding:12px 13px;cursor:pointer;font-size:15px;font-weight:600;
+}
+.pick:hover{border-color:var(--ink);}
+.pick .rol{margin-left:auto;font-size:11px;color:var(--ink-3);font-weight:600;letter-spacing:.02em;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+.pick .nm{display:flex;flex-direction:column;gap:1px;min-width:0}
+.pick .nm b{font-family:"Archivo",sans-serif;font-weight:700;font-size:15px}
+.pick .nm small{font-size:11.5px;color:var(--ink-3);font-weight:600}
+.nomInput{
+  width:100%;padding:12px 13px;border-radius:9px;border:1.5px solid var(--line);
+  background:var(--bg);color:var(--ink);font:inherit;font-size:16px;font-weight:600;
+}
+.nomInput:focus{outline:2px solid var(--amarillo);outline-offset:1px;border-color:var(--amarillo)}
+.tab.mio{border-color:var(--amarillo);box-shadow:inset 0 0 0 1px var(--amarillo)}
+.tab.mio[aria-selected="true"]{box-shadow:none}
+.pick .av{
+  width:28px;height:28px;border-radius:99px;flex:none;display:grid;place-items:center;
+  font-family:"Archivo",sans-serif;font-weight:800;font-size:12px;
+  background:var(--amarillo);color:#1A1714;
+}
+.pick.jefe .av{background:var(--rojo);color:#fff}
+pre.msg{
+  white-space:pre-wrap;word-break:break-word;font-family:"IBM Plex Mono",monospace;
+  font-size:12.5px;line-height:1.5;background:var(--bg);border:1px solid var(--line);
+  border-radius:9px;padding:12px;margin:0;max-height:44vh;overflow:auto;
+}
+
+/* ---------- reglas page ---------- */
+.rules{display:flex;flex-direction:column;gap:10px;margin-top:6px}
+.rule{display:flex;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px}
+.rule .num{
+  flex:none;width:26px;height:26px;border-radius:7px;background:var(--ink);color:var(--surface);
+  display:grid;place-items:center;font-family:"Archivo",sans-serif;font-weight:800;font-size:13px;
+}
+.rule h3{font-size:15px;font-weight:700;margin-bottom:2px}
+.rule p{margin:0;font-size:13.5px;color:var(--ink-2);line-height:1.45}
+.grid2{display:grid;grid-template-columns:1fr;gap:10px;margin-top:6px}
+@media(min-width:620px){.grid2{grid-template-columns:1fr 1fr}}
+.minicard{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:13px 14px}
+.minicard h3{font-size:13px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-3);margin-bottom:7px}
+.minicard ul{margin:0;padding-left:17px;font-size:13.5px;color:var(--ink-2);line-height:1.55}
+.minicard li{margin-bottom:4px}
+.minicard li b{color:var(--ink)}
+.footnote{font-size:12.5px;color:var(--ink-3);margin-top:26px;line-height:1.5;border-top:1px solid var(--line);padding-top:14px}
+
+
+/* ---------- cierre de turno ---------- */
+.cierre{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  padding:15px;box-shadow:var(--shadow);
+}
+.cierre.ok{border-color:var(--verde);background:var(--verde-tint)}
+.cierre.pend{border-color:var(--ambar);background:var(--amarillo-tint)}
+.c-res{margin:0 0 12px;font-size:14.5px;color:var(--ink-2);line-height:1.45}
+.c-res b{color:var(--ink);font-weight:700;font-family:"IBM Plex Mono",monospace}
+.c-botones{display:flex;flex-direction:column;gap:9px}
+@media(min-width:520px){.c-botones{flex-direction:row}}
+.c-btn{
+  flex:1;border:1.5px solid var(--line);border-radius:10px;
+  padding:15px 14px;font-family:"Archivo",sans-serif;font-size:16px;font-weight:700;
+  cursor:pointer;background:var(--surface-2);letter-spacing:-.01em;min-height:52px;
+}
+.c-btn.ok{background:var(--verde);border-color:var(--verde);color:#fff}
+.c-btn.ok:hover{filter:brightness(1.08)}
+.c-btn.pend{background:transparent;border-color:var(--ambar);color:var(--ambar)}
+.c-btn.pend:hover{background:var(--amarillo-tint)}
+.c-ayuda{margin:11px 0 0;font-size:12.5px;color:var(--ink-3);line-height:1.45}
+.c-sello{display:flex;align-items:center;gap:12px}
+.c-ico{
+  flex:none;width:38px;height:38px;border-radius:99px;display:grid;place-items:center;
+  font-family:"Archivo",sans-serif;font-weight:800;font-size:19px;color:#fff;
+}
+.cierre.ok .c-ico{background:var(--verde)}
+.cierre.pend .c-ico{background:var(--ambar)}
+.c-tx{display:flex;flex-direction:column;gap:2px;min-width:0}
+.c-tx b{font-family:"Archivo",sans-serif;font-size:16px;font-weight:800;letter-spacing:-.01em}
+.c-tx small{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--ink-2);font-weight:600}
+.c-det{
+  margin:12px 0 0;padding:10px 12px;border-radius:8px;background:var(--surface);
+  border:1px solid var(--line);font-size:14px;line-height:1.45;white-space:pre-wrap;
+}
+.c-re{margin-top:12px;width:100%;font-size:13px;padding:9px}
+.tsp-sello{
+  display:inline-block;margin-left:8px;font-size:11px;font-weight:700;
+  padding:2px 7px;border-radius:5px;letter-spacing:.02em;
+}
+.tsp-sello.ok{background:var(--verde-tint);color:var(--verde)}
+.tsp-sello.pend{background:var(--amarillo-tint);color:var(--ambar)}
+.tsp-sello.abierto{background:var(--rojo-tint);color:var(--rojo)}
+
+/* ---------- celulares chicos ---------- */
+@media(max-width:400px){
+  .wrap{padding:0 11px 130px}
+  .hd{padding:9px 11px 0;gap:8px}
+  .tabs{padding:8px 11px}
+  .brandtxt h1{font-size:15px}
+  .brandtxt .sub{font-size:10.5px}
+  .whoami{padding:6px 10px;font-size:12.5px;max-width:120px}
+  .whoami #quienTxt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .lhead h2{font-size:23px}
+  .task{padding:12px 11px;gap:11px}
+  .ttxt{font-size:15px}
+  .tdet{font-size:12.5px}
+  .field{padding:10px 11px;gap:9px}
+  .field input{width:88px;font-size:15px}
+  .field .flab{font-size:13.5px}
+  .modal .mh{padding:16px 15px 4px}
+  .modal .mb{padding:12px 15px 16px}
+  .pick{padding:11px}
+  .pick .rol{font-size:10px}
+  .cierre{padding:13px}
+  .c-btn{font-size:15px}
+}
+
+*:focus-visible{outline:2px solid var(--amarillo);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header>
+  <div class="hd">
+    <div class="brandmark">PF</div>
+    <div class="brandtxt">
+      <h1>Parte Diario</h1>
+      <div class="sub" id="fechaHoy">—</div>
+    </div>
+    <button class="whoami" id="btnQuien"><span class="dot"></span><span id="quienTxt">Entrar</span></button>
+  </div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+</header>
+
+<div class="wrap" id="app"></div>
+
+<div class="bar">
+  <div class="in">
+    <span class="sync" id="sync">conectando…</span>
+    <button class="btn pri" id="btnWA">Armar traspaso</button>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   PARTE DIARIO — Punilla Full
+   Estado compartido en la nube: un documento por día.
+   ============================================================ */
+
+const PUESTOS = [
+  {id:'enc_m', nombre:'Encargado',   turno:'Turno mañana', horario:'7:55 – 16:05', jefe:true},
+  {id:'enc_t', nombre:'Encargado',   turno:'Turno tarde',  horario:'15:55 – 00:05', jefe:true},
+  {id:'fiam_m',nombre:'Fiambrería',  turno:'Turno mañana', horario:'7:55 – 16:00'},
+  {id:'fiam_t',nombre:'Fiambrería',  turno:'Turno tarde',  horario:'15:55 – 00:00'},
+  {id:'prod',  nombre:'Producción carne', turno:'Mediodía', horario:'10:55 – 15:00'},
+];
+const NOMBRES_ENC = ['Julián','Vanesa'];
+
+const T = (id,hora,txt,det,crit) => ({id,hora,txt,det:det||'',crit:!!crit});
+const F = (id,lab,sub,ph) => ({id,tipo:'campo',lab,sub:sub||'',ph:ph||''});
+
+const FIAM_BLOQUES = [
+    {n:'5 minutos antes de tu turno', items:[
+      T('f1','—','Fichar. Uniforme limpio, cofia, manos lavadas, sin anillos ni reloj'),
+      T('f2','—','Prender la luz de la vitrina y anotar la temperatura del mostrador'),
+      F('f_temp','Mostrador al entrar','','°C'),
+    ]},
+    {n:'Contar antes de tocar nada', items:[
+      T('f3','—','Contar las bandejas que hay: picadas, fiambres y pizzas','Se cuenta ANTES de armar. Si contás después ya no sabés qué te dejaron.',true),
+      T('f4','—','Contar las hormas de fiambre y quesos abiertos'),
+      F('bj_pic','Bandejas de picada','','u'),
+      F('bj_fia','Bandejas de fiambre','','u'),
+      F('bj_piz','Bandejas de pizza','','u'),
+      F('hormas','Hormas abiertas','','u'),
+    ]},
+    {n:'Armar el sector', items:[
+      T('f5','—','Sacar de cámara. Lo abierto va con fecha; sin fecha no se vende','Lo que no tiene fecha se descarta y se anota como merma.',true),
+      T('f6','—','Revisar hormas y quesos abiertos: que ninguno esté feo','El que perdió cara sale del mostrador. No se disimula girándolo.',true),
+      T('f7','—','Armar el mostrador con cartel de precio en cada pieza','Lo que vence antes va adelante.',true),
+      T('f8','—','Limpiar la cortadora antes del primer corte'),
+    ]},
+    {n:'Bandejas · cuántas tiene que haber', items:[
+      T('f9','—','Lunes a miércoles: armar según demanda, sin sobrestock','Días flojos. Lo que se arma de más se pasa y se tira.'),
+      T('f10','—','Jueves a domingo: mínimo 3 bandejas de cada una · de fiambre, 4','Es el mínimo, no el objetivo. Si a las 18:00 quedan menos, se arman más.',true),
+      T('f11','—','Viernes a domingo: la exhibidora SIEMPRE llena','Ni el domingo a la tarde. Una exhibidora a medio llenar dice que ya cerramos.',true),
+    ]},
+    {n:'Durante el turno', items:[
+      T('f12','—','Limpiar la cortadora al pasar de crudo a cocido','Nunca la misma hoja sin limpiar en el medio.',true),
+      T('f13','—','Fetear para el pico, no de más','Lo feteado se seca.'),
+      T('f14','—','Preguntar siempre si necesita algo más'),
+      T('f15','—','Ofrecer lo que está por vencer antes de que se pase','Con precio de oferta, no escondido atrás.',true),
+      T('f16','—','Si quedan menos de 2 hormas: avisar al encargado Y al grupo de WhatsApp','En el momento, no al final del turno. Con 2 hormas ya es tarde para pedir.',true),
+      T('f17','—','Hacer la limpieza que pidió el encargado'),
+    ]},
+    {t:'m', n:'Antes de irse · 15:30 a 16:00', items:[
+      T('g1','15:30','Limpieza profunda: cortadora desarmada, tablas y cuchillos'),
+      T('g2','15:45','Dejar el mostrador armado, con cara y contado','No se entrega vacío ni sucio.',true),
+      T('g3','15:50','Contar bandejas y hormas otra vez y anotarlo abajo','Sin el conteo de salida no hay forma de saber cuánto se vendió.',true),
+      T('g4','15:55','Pasarle al encargado la merma del turno y lo que falta pedir','',true),
+      F('m_merma','Merma del turno','','kg'),
+      F('m_bj_out','Bandejas al salir (pic/fia/piz)','','u'),
+    ]},
+    {t:'t', n:'Antes de irse · 22:30 a 00:00', items:[
+      T('h1','22:30','Empezar a guardar lo que ya no sale: a cámara, filmado y con fecha','Nada queda fuera de frío. Ni una bandeja, ni "un ratito".',true),
+      T('h2','23:00','Sacar lo que no aguanta otro día y anotar la merma con producto y kilos'),
+      T('h3','23:15','Limpieza profunda: cortadora desarmada, tablas, cuchillos, vitrina por dentro','Desde acá ya no se fetea: al que pida, se le ofrece lo envasado.',true),
+      T('h4','23:40','Mostrador vacío, seco y desinfectado. Piso del sector'),
+      T('h5','23:55','Contar bandejas y hormas, anotarlo y mostrarle el sector al encargado','No te vas sin el OK.',true),
+      F('t_merma','Merma del turno','','kg'),
+      F('t_bj_out','Bandejas al salir (pic/fia/piz)','','u'),
+    ]},
+  ];
+const FIAM = t => ({
+  id: 'fiam_' + t,
+  nombre: t === 'm' ? 'Fiambrería mañana' : 'Fiambrería tarde',
+  puesto: 'Mostrador',
+  horario: t === 'm' ? '7:55 – 16:00' : '15:55 – 00:00',
+  turno: t,
+  bloques: FIAM_BLOQUES.filter(b => !b.t || b.t === t)
+});
+
+const LISTAS = [
+{
+  id:'enc_m', nombre:'Encargado mañana', puesto:'Julián o Vanesa', horario:'7:55 – 16:05', turno:'m',
+  bloques:[
+    {n:'Los 5 minutos antes de abrir · 7:55 a 8:00', items:[
+      T('a1','7:55','Alarma, luces y prender POS, POSNET y balanzas','Se prenden primero porque tardan en levantar. Mientras arrancan hacés el resto.',true),
+      T('a2','7:56','Vuelta rápida: que no haya agua en el piso, olor raro ni nada forzado','Treinta segundos. Si algo pasó de noche, se ve ahora y no a las 11.',true),
+      T('a3','7:57','Persiana, puertas y cortinas. Abrirle a la chica de fiambrería'),
+      T('a4','7:58','Verificar el sobre del fondo de caja contra lo que dejó anotado la noche anterior','Se cuenta UNA vez porque anoche ya se contó y se ensobró. Si no coincide se avisa ahora, no a las 12.',true),
+      T('a5','7:59','Poner folklore. Por la tele o por el parlante','El local nunca abre en silencio.',true),
+      T('a6','8:00','ABRIR. Las 8:00 son las 8:00','',true),
+      F('caja_ap','Fondo de caja verificado','','$'),
+    ]},
+    {n:'Primeros 20 minutos · ya con la puerta abierta', items:[
+      T('b0','—','REGLA: si entra un cliente, dejás lo que estás haciendo y cobrás','La caja nunca queda sola con plata adentro. Todo lo de esta lista se interrumpe por un cliente.',true),
+      T('b2','8:05','Escribir la pizarra con la oferta del día','Sale de lo que está por vencer y de lo que Nico o Jesi hayan marcado. La pizarra no se saca en blanco.',true),
+      T('b3','8:08','Sacar el canasto y atarlo con la cadena. Sacar los carteles y la pizarra'),
+      T('b4','8:12','Pararse en la calle y mirar si los carteles se ven desde el auto','Se ven desde el auto en movimiento o no sirven. Si algo tapa, se corre.',true),
+      T('b5','8:15','Chequear que ningún empleado esté estacionado en los primeros lugares'),
+      T('b6','8:18','Vereda barrida y baños revisados'),
+      T('b6b','8:19','Verificar que la puerta de atrás esté cerrada con la puerta blanca','No se abre en todo el día. Ni para ventilar ni para recibir.',true),
+      T('b7','8:20','Ver que carnicería y verdulería hayan abierto','Si un sector no abrió se le avisa AL OPERADOR, nunca a su empleado.'),
+    ]},
+    {n:'Durante el turno · 8:20 a 15:45', items:[
+      T('m1','8:30','Recorrer las góndolas: frente de góndola, todo adelante'),
+      T('m2','8:45','Reponer primero lo que más sale ese día de la semana'),
+      T('m3','9:00','Recorrida de precios: ningún producto sin cartel','Sin cartel de precio no se vende.',true),
+      T('m4','—','LLEGA UN PROVEEDOR: avisar al grupo de WhatsApp que llegó','',true),
+      T('m5','—','Controlar temperatura y vencimiento ANTES de firmar el remito','Si firmaste, lo pagaste. Producto por encima de 5 °C no entra. Lo rechazado se anota en el remito delante del repartidor.',true),
+      T('m5b','—','Subir la factura al grupo. Nico o Jesi pagan por transferencia','El encargado no paga nada. Sube la foto de la factura y avisa.',true),
+      T('m5c','—','Ver qué falta, hacer el listado y pasarlo al grupo','Nico y Jesi aprueban el pedido. Nada se pide sin que ellos digan que sí.',true),
+      T('m5d','—','Cargar la recepción en el sistema el mismo día'),
+      T('m8','12:15','Decirle a fiambrería qué limpiar hoy','Sale del control de recién. Se pide con nombre y apellido, no "limpiá un poco".',true),
+      T('m9','12:30','Control de producción de carne: etiquetas, PLU y área limpia'),
+      T('m9b','14:15','Control de la exhibidora de carne: llena, con cara y sin bandejas vencidas','Es autoservicio: lo que el cliente ve es lo que decide. Bandeja fea, bandeja que no se vende.',true),
+      T('m10','13:00','Comer en el local, sin salir del puesto, en los ratos flojos','Nadie sale a la calle a comer. Se come atrás del mostrador o de la caja y se corta apenas entra un cliente.'),
+      T('m11','—','Día de lluvia: doble trapo en la entrada'),
+      T('m12','—','Atender: preguntar siempre si necesita algo más'),
+      T('m13','—','Ofrecer lo que está por vencer y las bandejas de carne y pollo del día','Se ofrece, no se espera a que lo pregunten. Lo que no se ofrece se tira.',true),
+      T('m15','14:30','Piso, baños y cestos'),
+      T('m16','15:00','Pasar al grupo el listado de lo que falta pedir','Nico y Jesi lo aprueban. El encargado no manda pedidos por su cuenta.',true),
+      T('m17','15:30','Verificar que fiambrería hizo la limpieza que le pediste','Pedir sin controlar es no pedir.',true),
+    ]},
+    {n:'Cerrar el turno · 15:45 a 16:05', items:[
+      T('x0','15:45','Sacar el corte de turno por sistema','Contra este número se cuenta. Todo lo que se venda después ya es del turno tarde.',true),
+      T('x1','15:48','Contar la caja DOS VECES contra el corte','Mientras contás no se cobra en esa caja. Si entra un cliente, espera o cobra el de tarde cuando llegue.',true),
+      T('x2','15:55','Llega el de tarde y ficha'),
+      T('x3','15:58','Los dos verifican el conteo y firman','Verificar, no recontar de cero. Desde ahí la caja es del de tarde.',true),
+      T('x4','16:00','Foto del cierre manual y del cierre por sistema a Jesi y a Nico','',true),
+      T('x5','16:02','Pasarle al de tarde lo que quedó pendiente','Se dice y se escribe abajo.',true),
+      T('x5b','16:03','Sacar la basura, controlar el depósito y volver a cerrar la puerta blanca','Es la única vez del turno que se abre la puerta de atrás. Se cierra en el momento.',true),
+      T('x6','16:05','Recién ahora se va'),
+      F('c_sistema','Corte por sistema','','$'),
+      F('c_contado','Contado','','$'),
+      F('c_dif','Diferencia','Se anota aunque sea de $500','$'),
+    ]},
+  ]
+},
+{
+  id:'enc_t', nombre:'Encargado tarde', puesto:'Julián o Vanesa', horario:'15:55 – 00:05', turno:'t',
+  bloques:[
+    {n:'Recibir el turno · 15:55 a 16:10', items:[
+      T('r1','15:55','Fichar 5 minutos antes'),
+      T('r2','15:58','Verificar el conteo de caja con el de mañana y firmar los dos','',true),
+      T('r3','16:02','Escuchar y anotar lo que quedó pendiente del turno mañana','',true),
+      T('r4','16:05','Recorrida rápida: fiambrería, carne, salón, depósito, baños'),
+      T('r5','16:10','Foto de la planilla al grupo. La saca el que entra','',true),
+    ]},
+    {n:'Durante el turno · 16:10 a 23:00', items:[
+      T('t2','16:30','Recorrer góndolas y la exhibidora de carne: frente y reposición para el pico'),
+      T('t3','17:00','Recorrida de precios: ningún producto sin cartel','',true),
+      T('t3b','—','LLEGA UN PROVEEDOR: avisar al grupo, controlar antes de firmar y subir la factura','Nico o Jesi pagan por transferencia. Si falta algo, listado al grupo para que lo aprueben.',true),
+      T('t5','17:30','Comer en el local antes del pico, sin salir del puesto','Después de las 18:00 no hay chance. Se come atrás de la caja y se corta apenas entra un cliente.'),
+      T('t6','—','Día de lluvia: doble trapo en la entrada'),
+      T('t7','18:30','Pico: fila corta y mostradores llenos','Si la fila pasa de [ 4 ] personas se abre la segunda caja o cobra el encargado. Se avisa antes de que se haga larga.',true),
+      T('t8','—','Atender: preguntar siempre si necesita algo más'),
+      T('t9','—','Ofrecer lo que está por vencer y las bandejas de carne y pollo del día','',true),
+      T('t10','21:30','Retiro de seguridad: pasar plata a la caja fuerte y anotarlo'),
+    ]},
+    {n:'Cerrar ANTES de las 00:00 · el local sigue abierto', items:[
+      T('z1','23:00','Piso, baños, cestos y limpieza de los sectores que ya no producen','Se limpia atendiendo. El que entra 23:50 no tiene que ver que estamos levantando todo.',true),
+      T('z2','23:10','Recordarles a carnicería y verdulería que cierran 00:00, igual que el local','Se le dice al operador o a quien él dejó a cargo. Si un sector apaga antes, se anota y se le avisa al operador al día siguiente.',true),
+      T('z4','23:30','Entrar el canasto, los carteles y la pizarra. Sacar la cadena'),
+      T('z4b','23:33','Sacar la basura, controlar el depósito y volver a cerrar la puerta blanca','Es la única vez del turno que se abre la puerta de atrás. Se cierra en el momento.',true),
+      T('z5','23:38','Cerrar depósito, ventanas y puertas de fondo. Nada de valor a la vista'),
+      T('z6','23:40','Sacar el corte por sistema y hacer el retiro grande: todo menos un fondo chico, contado DOS VECES','Este es el conteo real del día. Después de las 00:00 no hay tiempo para contar una caja llena.',true),
+      T('z7','23:50','Armar y contar el sobre del fondo fijo de mañana, y anotar el monto','Mañana el de la apertura sólo lo verifica. Por eso tiene que quedar bien contado hoy.',true),
+      T('z8','23:55','Recibir el sector de fiambrería y dar el OK antes de que se vaya','',true),
+      F('z_sistema','Corte por sistema','','$'),
+      F('z_retiro','Retiro contado','','$'),
+      F('z_fondo','Fondo para mañana','','$'),
+    ]},
+    {n:'Los 5 minutos · 00:00 a 00:05', items:[
+      T('y1','00:00','Cerrar la puerta y terminar de atender al que está adentro','',true),
+      T('y1b','00:00','Ver que carnicería y verdulería hayan cerrado y dejado limpio','Si un sector dejó desastre, se saca foto y se le manda al operador. No lo limpiamos nosotros.',true),
+      T('y2','00:01','Contar lo que quedó en caja, sumarlo al retiro y anotar la diferencia','Se anota aunque sea de $500.',true),
+      T('y3','00:02','Foto del cierre manual y del cierre por sistema a Jesi y a Nico','',true),
+      T('y4','00:03','Apagar luces, cartelería, balanzas, POS y aire','Las heladeras, cámaras y freezers NO se apagan nunca.',true),
+      T('y5','00:04','Persiana, alarma, llave, fichar salida'),
+      T('y6','00:05','Mensaje al grupo: cerrado, caja, diferencia y novedad'),
+      F('y_ultimo','Lo que quedó en caja','','$'),
+      F('y_total','Total del día','','$'),
+      F('y_dif','Diferencia','','$'),
+    ]},
+  ]
+},
+FIAM('m'),
+FIAM('t'),
+{
+  id:'prod', nombre:'Producción carne', puesto:'Sector propio', horario:'10:55 – 15:00', turno:'m',
+  bloques:[
+    {n:'Antes de empezar', items:[
+      T('p1','10:55','Fichar. Uniforme, guantes, área desinfectada'),
+      T('p2','11:00','Revisar en cámara lo que vas a trabajar: temperatura, fecha y vacío sin pérdidas','La recepción del proveedor la hizo el encargado. Esto es el control tuyo antes de cortar: lo que está mal no se procesa, se separa y se avisa.',true),
+      T('p3','11:05','Sacar de cámara sólo lo de la próxima hora','La carne no espera afuera.'),
+      F('p_temp','Temperatura de la carne','','°C'),
+    ]},
+    {n:'Producción · 11:10 a 14:00', items:[
+      T('p4','11:10','Fraccionar, envasar y etiquetar con el PLU propio','Cada bandeja: producto, peso, precio, fecha y vencimiento.'),
+      T('p5','—','Si un PLU no lo lee la caja, avisar en el momento','Pendiente abierto: la etiqueta del frigorífico trae el PLU del proveedor.',true),
+      T('p6','—','Anotar kilos que entraron, kilos en bandeja y merma','Sin este número no hay forma de saber si el rendimiento es el que debería.'),
+      T('p7','14:00','Reponer la heladera exhibidora de carne con lo producido','Es autoservicio: bandejas parejas, etiqueta al frente, lo que vence antes adelante.',true),
+      F('p_in','Kilos que entraron','','kg'),
+      F('p_out','Kilos en bandeja','','kg'),
+      F('p_merma','Recorte y merma','','kg'),
+    ]},
+    {n:'Antes de irse', items:[
+      T('p8','14:20','Guardar en cámara lo que no queda expuesto, tapado y etiquetado','Primero se guarda, después se limpia. Al revés volvés a ensuciar.',true),
+      T('p9','14:35','Limpiar todo: mesada, tablas, cuchillos, sierra, envasadora y piso','El trapo de carne no se usa en ningún otro sector.',true),
+      T('p10','15:00','Mostrarle el área al encargado y pasarle los kilos antes de irte','',true),
+    ]},
+  ]
+},
+{ id:'reglas', nombre:'Reglas', puesto:'', horario:'', turno:'x', reglas:true }
+];
+
+/* ---------- estado ---------- */
+const hoy = (() => {
+  const d = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Argentina/Cordoba'}));
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+})();
+
+let ESTADO = {};           // {listaId:{items:{id:{by,at}}, campos:{id:val}, nota:''}}
+let db = null, docRef = null, listaActiva = 'enc_m', yo = null, guardando = false, pendiente = null;
+
+try{ yo = JSON.parse(localStorage.getItem('pf_yo')||'null'); }catch(e){ yo = null; }
+if(yo && (!yo.puesto || !PUESTOS.some(p => p.id === yo.puesto))) yo = null;
+const miPuesto = () => yo ? PUESTOS.find(p => p.id === yo.puesto) : null;
+const soyJefe = () => { const p = miPuesto(); return !!(p && p.jefe); };
+
+function estadoLista(id){
+  if(!ESTADO[id]) ESTADO[id] = {items:{},campos:{},nota:''};
+  if(!ESTADO[id].items) ESTADO[id].items = {};
+  if(!ESTADO[id].campos) ESTADO[id].campos = {};
+  return ESTADO[id];
+}
+const ahora = () => new Date().toLocaleTimeString('es-AR',{timeZone:'America/Argentina/Cordoba',hour:'2-digit',minute:'2-digit',hour12:false});
+
+/* ---------- persistencia ---------- */
+function setSync(txt, off){
+  const el = document.getElementById('sync');
+  el.textContent = txt; el.classList.toggle('off', !!off);
+}
+
+function escribiendo(){
+  const a = document.activeElement;
+  return !!a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA');
+}
+let renderDiferido = false;
+document.addEventListener('focusout', () => {
+  if(renderDiferido){ renderDiferido = false; setTimeout(() => { if(!escribiendo()) render(); }, 60); }
+});
+
+async function conectar(){
+  if(typeof claude === 'undefined' || !claude || typeof claude.use !== 'function'){
+    setSync('sin conexión · sólo este equipo', true); return;
+  }
+  try{ db = await claude.use('db'); }catch(e){ db = null; }
+  if(!db){ setSync('sin conexión · sólo este equipo', true); return; }
+  docRef = db.doc('dias/' + hoy);
+  docRef.onSnapshot(snap => {
+    if(snap.exists){
+      const d = snap.data();
+      ESTADO = (d && d.listas) || {};
+      if(escribiendo()) renderDiferido = true; else render();
+    }
+    setSync(snap.metadata.hasPendingWrites ? 'guardando…' : 'al día ✓');
+  }, err => {
+    setSync('sin conexión · sólo este equipo', true);
+  });
+}
+
+async function guardar(){
+  if(!docRef){ return; }
+  if(guardando){ pendiente = true; return; }
+  guardando = true;
+  try{
+    await docRef.set({fecha:hoy, listas:ESTADO, actualizado:new Date().toISOString()});
+    setSync('al día ✓');
+  }catch(e){
+    setSync(e && e.code === 'quota_exceeded' ? 'base llena · avisar a Nico' : 'no se pudo guardar', true);
+  }
+  guardando = false;
+  if(pendiente){ pendiente = false; guardar(); }
+}
+let tGuardar = null;
+function guardarPronto(){ clearTimeout(tGuardar); tGuardar = setTimeout(guardar, 400); }
+
+/* ---------- render ---------- */
+function renderTabs(){
+  const c = document.getElementById('tabs');
+  c.innerHTML = '';
+  const visibles = !yo ? LISTAS
+    : LISTAS.filter(L => L.id === yo.puesto || L.reglas);
+  visibles.forEach(L => {
+    const b = document.createElement('button');
+    b.className = 'tab'; b.setAttribute('role','tab');
+    b.setAttribute('aria-selected', L.id === listaActiva ? 'true' : 'false');
+    const p = L.reglas ? null : progreso(L);
+    if(yo && L.id === yo.puesto) b.classList.add('mio');
+    b.innerHTML = '<span class="t-n"></span><span class="t-h"></span>' +
+      (p ? '<span class="t-bar"><i style="width:'+(p.total?Math.round(p.hechas/p.total*100):0)+'%"></i></span>' : '');
+    b.querySelector('.t-n').textContent = L.nombre;
+    b.querySelector('.t-h').textContent = L.reglas ? 'siempre' : (L.horario + (p.total ? '  ·  ' + p.hechas + '/' + p.total : ''));
+    b.onclick = () => { listaActiva = L.id; render(); window.scrollTo(0,0); };
+    c.appendChild(b);
+  });
+}
+
+function progreso(L){
+  const st = estadoLista(L.id);
+  let total = 0, hechas = 0;
+  (L.bloques||[]).forEach(b => b.items.forEach(it => {
+    total++;
+    if(it.tipo === 'campo'){ if(st.campos[it.id] != null && st.campos[it.id] !== '') hechas++; }
+    else if(st.items[it.id]) hechas++;
+  }));
+  return {total, hechas};
+}
+
+function nombreDe(v){ return v && v.n ? v.n : (v || '—'); }
+
+function render(){
+  renderTabs();
+  const L = LISTAS.find(x => x.id === listaActiva);
+  const app = document.getElementById('app');
+  app.innerHTML = '';
+  document.getElementById('btnWA').style.display = L.reglas ? 'none' : '';
+  if(L.reglas){ renderReglas(app); return; }
+
+  const st = estadoLista(L.id);
+  const p = progreso(L);
+
+  const head = document.createElement('div');
+  head.className = 'lhead';
+  const pillCls = L.turno === 'm' ? 'm' : (L.turno === 't' ? 't' : 'x');
+  const pillTxt = L.turno === 'm' ? 'Turno mañana' : (L.turno === 't' ? 'Turno tarde' : 'Los dos turnos');
+  head.innerHTML =
+    '<div class="who">' +
+      '<span class="pill ' + pillCls + '">' + pillTxt + '</span>' +
+      '<h2 style="margin-top:7px"></h2>' +
+      '<div class="meta"><b class="mono"></b> · <span class="pu"></span></div>' +
+    '</div>' +
+    '<div class="prog"><span class="track"><i style="width:' + (p.total ? Math.round(p.hechas/p.total*100) : 0) + '%"></i></span><span class="n">' + p.hechas + ' de ' + p.total + '</span></div>';
+  head.querySelector('h2').textContent = L.nombre;
+  head.querySelector('.mono').textContent = L.horario;
+  head.querySelector('.pu').textContent = L.puesto;
+  app.appendChild(head);
+
+  if(L.intro){
+    const n = document.createElement('div');
+    n.className = 'note';
+    n.innerHTML = '<span class="nt">De qué se trata</span>';
+    const s = document.createElement('span'); s.textContent = L.intro; n.appendChild(s);
+    app.appendChild(n);
+  }
+
+  const DE_QUIEN = {enc_t:'enc_m', fiam_t:'fiam_m'};
+  if(DE_QUIEN[L.id]) app.appendChild(panelTraspaso(DE_QUIEN[L.id]));
+
+  L.bloques.forEach(bl => {
+    const t = document.createElement('div');
+    t.className = 'blockname'; t.textContent = bl.n;
+    app.appendChild(t);
+    const card = document.createElement('div');
+    card.className = 'card';
+    bl.items.forEach(it => card.appendChild(it.tipo === 'campo' ? campoEl(L, it, st) : tareaEl(L, it, st)));
+    app.appendChild(card);
+  });
+
+  const t = document.createElement('div');
+  t.className = 'blockname'; t.textContent = 'Novedades del turno';
+  app.appendChild(t);
+  const ta = document.createElement('textarea');
+  ta.className = 'nota';
+  ta.placeholder = 'Lo que quedó pendiente, lo que se rompió, lo que el otro turno tiene que saber. Si no está acá, no pasó.';
+  ta.value = st.nota || '';
+  ta.oninput = () => { st.nota = ta.value; guardarPronto(); };
+  app.appendChild(ta);
+
+  app.appendChild(bloqueCierre(L, st, p));
+
+  const f = document.createElement('div');
+  f.className = 'footnote';
+  f.textContent = 'Los corchetes [ ] son decisiones que Nico todavía no cerró. Hay que llenarlos antes de imprimir esto.';
+  app.appendChild(f);
+}
+
+
+
+function bloqueCierre(L, st, p){
+  const wrap = document.createElement('div');
+
+  const t = document.createElement('div');
+  t.className = 'blockname'; t.textContent = 'Cerrar mi turno';
+  wrap.appendChild(t);
+
+  const c = document.createElement('div');
+  c.className = 'cierre';
+  const falta = p.total - p.hechas;
+
+  if(st.cierre){
+    const ok = st.cierre.estado === 'ok';
+    c.classList.add(ok ? 'ok' : 'pend');
+    const sello = document.createElement('div');
+    sello.className = 'c-sello';
+    sello.innerHTML = '<span class="c-ico"></span><span class="c-tx"><b></b><small></small></span>';
+    sello.querySelector('.c-ico').textContent = ok ? '✓' : '!';
+    sello.querySelector('b').textContent = ok ? 'Turno cerrado, todo hecho' : 'Turno cerrado con pendientes';
+    sello.querySelector('small').textContent = st.cierre.by + ' · ' + st.cierre.at;
+    c.appendChild(sello);
+    if(!ok && st.cierre.detalle){
+      const dd = document.createElement('p'); dd.className = 'c-det';
+      dd.textContent = st.cierre.detalle;
+      c.appendChild(dd);
+    }
+    const re = document.createElement('button');
+    re.className = 'btn c-re'; re.textContent = 'Reabrir';
+    re.onclick = () => { delete st.cierre; render(); guardarPronto(); };
+    c.appendChild(re);
+    wrap.appendChild(c);
+    return wrap;
+  }
+
+  const res = document.createElement('p');
+  res.className = 'c-res';
+  res.innerHTML = falta === 0
+    ? 'Tildaste <b>las ' + p.total + '</b>. Podés cerrar como terminado.'
+    : 'Te quedan <b>' + falta + '</b> sin tildar de ' + p.total + '.';
+  c.appendChild(res);
+
+  const row = document.createElement('div');
+  row.className = 'c-botones';
+
+  const bOk = document.createElement('button');
+  bOk.className = 'c-btn ok'; bOk.textContent = 'Hice todo';
+  const cerrarOk = () => {
+    st.cierre = {estado:'ok', by: yo.nombre, at: ahora()};
+    cerrarModal(); render(); guardarPronto();
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+  bOk.onclick = () => {
+    if(!yo){ abrirQuien(); return; }
+    if(falta === 0){ cerrarOk(); return; }
+    modal('Te quedan ' + falta + ' sin tildar',
+      'Si cerrás como terminado, queda firmado con tu nombre diciendo que hiciste todo.', m => {
+      const a = document.createElement('button');
+      a.className = 'c-btn ok'; a.textContent = 'Igual cerré todo';
+      a.onclick = cerrarOk;
+      const b2 = document.createElement('button');
+      b2.className = 'btn'; b2.textContent = 'Volver a tildar';
+      b2.onclick = cerrarModal;
+      m.appendChild(a); m.appendChild(b2);
+    });
+  };
+
+  const bPe = document.createElement('button');
+  bPe.className = 'c-btn pend'; bPe.textContent = 'Quedó pendiente';
+  bPe.onclick = () => {
+    if(!yo){ abrirQuien(); return; }
+    const txt = (st.nota || '').trim();
+    if(!txt){
+      modal('Falta decir qué quedó', 'El que entra tiene que saber qué hereda. Escribilo y volvé a cerrar.', m => {
+        const ta2 = document.createElement('textarea');
+        ta2.className = 'nota';
+        ta2.placeholder = 'Qué quedó sin hacer y por qué.';
+        m.appendChild(ta2);
+        const g = document.createElement('button');
+        g.className = 'c-btn pend'; g.textContent = 'Guardar y cerrar el turno';
+        g.onclick = () => {
+          const v = ta2.value.trim();
+          if(!v){ ta2.focus(); return; }
+          st.nota = v;
+          st.cierre = {estado:'pend', by: yo.nombre, at: ahora(), detalle: v};
+          cerrarModal(); render(); guardarPronto();
+          window.scrollTo(0, document.body.scrollHeight);
+        };
+        m.appendChild(g);
+        const c2 = document.createElement('button');
+        c2.className = 'btn'; c2.textContent = 'Cancelar';
+        c2.onclick = cerrarModal;
+        m.appendChild(c2);
+        setTimeout(() => ta2.focus(), 60);
+      });
+      return;
+    }
+    st.cierre = {estado:'pend', by: yo.nombre, at: ahora(), detalle: txt};
+    render(); guardarPronto();
+    window.scrollTo(0, document.body.scrollHeight);
+  };
+
+  row.appendChild(bOk); row.appendChild(bPe);
+  c.appendChild(row);
+
+  const ay = document.createElement('p');
+  ay.className = 'c-ayuda';
+  ay.textContent = 'Cerrá tu turno antes de irte. Queda firmado con tu nombre y la hora.';
+  c.appendChild(ay);
+
+  wrap.appendChild(c);
+  return wrap;
+}
+
+function panelTraspaso(origenId){
+  const O = LISTAS.find(x => x.id === origenId);
+  const st = ESTADO[origenId];
+  const d = document.createElement('div');
+  d.className = 'traspaso';
+  const h = document.createElement('div');
+  h.className = 'tsp-h';
+  h.textContent = 'Lo que te dejó ' + (origenId === 'enc_m' ? 'el encargado de la mañana' : 'fiambrería de la mañana');
+  d.appendChild(h);
+
+  if(!st || (!Object.keys(st.items || {}).length && !Object.keys(st.campos || {}).length && !st.nota)){
+    const v = document.createElement('p'); v.className = 'tsp-v';
+    v.textContent = 'Todavía no cargaron nada hoy. Si el turno ya terminó, preguntá antes de firmar.';
+    d.appendChild(v);
+    return d;
+  }
+
+  const p = progreso(O);
+  const n = document.createElement('div'); n.className = 'tsp-n';
+  n.innerHTML = '<b>' + p.hechas + ' de ' + p.total + '</b> hecho';
+  if(st.cierre){
+    const sp = document.createElement('span');
+    sp.className = 'tsp-sello ' + (st.cierre.estado === 'ok' ? 'ok' : 'pend');
+    sp.textContent = (st.cierre.estado === 'ok' ? 'Cerró todo' : 'Cerró con pendientes') + ' · ' + st.cierre.by;
+    n.appendChild(sp);
+  } else {
+    const sp = document.createElement('span');
+    sp.className = 'tsp-sello abierto';
+    sp.textContent = 'Turno sin cerrar';
+    n.appendChild(sp);
+  }
+  d.appendChild(n);
+
+  const faltan = [];
+  (O.bloques || []).forEach(b => b.items.forEach(it => {
+    if(it.tipo === 'campo'){ if(!st.campos[it.id]) faltan.push({txt: it.lab, crit: false}); }
+    else if(!st.items[it.id]) faltan.push({txt: it.txt, crit: it.crit});
+  }));
+  faltan.sort((a,b) => (b.crit?1:0) - (a.crit?1:0));
+
+  if(faltan.length){
+    const ul = document.createElement('ul'); ul.className = 'tsp-l';
+    faltan.slice(0,8).forEach(f => {
+      const li = document.createElement('li');
+      if(f.crit) li.className = 'crit';
+      li.textContent = f.txt;
+      ul.appendChild(li);
+    });
+    if(faltan.length > 8){
+      const li = document.createElement('li'); li.className = 'mas';
+      li.textContent = 'y ' + (faltan.length - 8) + ' más';
+      ul.appendChild(li);
+    }
+    d.appendChild(ul);
+  } else {
+    const ok = document.createElement('p'); ok.className = 'tsp-ok';
+    ok.textContent = 'Sin pendientes.';
+    d.appendChild(ok);
+  }
+
+  if(st.nota && st.nota.trim()){
+    const nt = document.createElement('div'); nt.className = 'tsp-nota';
+    const t = document.createElement('span'); t.className = 'tsp-nl'; t.textContent = 'Novedades';
+    const b = document.createElement('p'); b.textContent = st.nota.trim();
+    nt.appendChild(t); nt.appendChild(b);
+    d.appendChild(nt);
+  }
+  return d;
+}
+
+function tareaEl(L, it, st){
+  const d = document.createElement('div');
+  d.className = 'task' + (it.crit ? ' crit' : '') + (st.items[it.id] ? ' done' : '');
+  d.setAttribute('role','button'); d.tabIndex = 0;
+  d.innerHTML =
+    '<span class="box"><svg viewBox="0 0 24 24"><polyline points="4,12.5 9.5,18 20,6.5"></polyline></svg></span>' +
+    '<div class="tbody"><div class="trow"><span class="thora"></span><span class="ttxt"></span></div></div>';
+  d.querySelector('.thora').textContent = it.hora;
+  const tx = d.querySelector('.ttxt');
+  tx.textContent = it.txt;
+  if(it.crit){ const f = document.createElement('span'); f.className = 'critflag'; f.textContent = 'CLAVE'; tx.appendChild(f); }
+  if(it.det){
+    const p = document.createElement('div'); p.className = 'tdet'; p.textContent = it.det;
+    d.querySelector('.tbody').appendChild(p);
+  }
+  const m = st.items[it.id];
+  if(m){
+    const b = document.createElement('div'); b.className = 'tby';
+    b.textContent = '✓ ' + nombreDe(m) + ' · ' + m.at;
+    d.querySelector('.tbody').appendChild(b);
+  }
+  const toggle = () => {
+    if(!yo){ abrirQuien(); return; }
+    if(st.items[it.id]) delete st.items[it.id];
+    else st.items[it.id] = {n: yo.nombre, p: yo.puesto, at: ahora()};
+    render(); guardarPronto();
+  };
+  d.onclick = toggle;
+  d.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } };
+  return d;
+}
+
+function campoEl(L, it, st){
+  const d = document.createElement('div');
+  d.className = 'field';
+  d.innerHTML = '<label class="flab"></label>';
+  const lab = d.querySelector('.flab');
+  lab.textContent = it.lab;
+  if(it.sub){ const s = document.createElement('small'); s.textContent = it.sub; lab.appendChild(s); }
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.inputMode = 'decimal'; inp.placeholder = it.ph;
+  inp.value = st.campos[it.id] || '';
+  if(inp.value) inp.classList.add('filled');
+  const id = 'f_' + L.id + '_' + it.id;
+  inp.id = id; lab.setAttribute('for', id);
+  inp.oninput = () => {
+    st.campos[it.id] = inp.value;
+    inp.classList.toggle('filled', !!inp.value);
+    renderTabs(); guardarPronto();
+  };
+  d.appendChild(inp);
+  return d;
+}
+
+/* ---------- reglas ---------- */
+function renderReglas(app){
+  const h = document.createElement('div');
+  h.className = 'lhead';
+  h.innerHTML = '<div class="who"><span class="pill x">Vale todos los días</span><h2 style="margin-top:7px">Las reglas de la casa</h2><div class="meta">Lo que no se discute cada vez que pasa</div></div>';
+  app.appendChild(h);
+
+  const reglas = [
+    ['1','Nada sucio se hereda','Si tu turno lo ensució, tu turno lo limpia. El mostrador, la cortadora, el piso del sector y la caja se entregan como te gustaría encontrarlos.'],
+    ['2','Lo que no pudiste hacer se escribe','No se tapa y no se cuenta de palabra. Va en la nota del turno y en la foto al grupo. Con un error se puede trabajar; con enterarse tarde, no.'],
+    ['3','La puerta de atrás queda cerrada','Se cierra con la puerta blanca y NO se vuelve a abrir en todo el día. La única excepción es al terminar el turno, para sacar la basura, y se vuelve a cerrar en el momento.'],
+  ];
+  const w = document.createElement('div'); w.className = 'rules';
+  reglas.forEach(r => {
+    const e = document.createElement('div'); e.className = 'rule';
+    e.innerHTML = '<span class="num"></span><div><h3></h3><p></p></div>';
+    e.querySelector('.num').textContent = r[0];
+    e.querySelector('h3').textContent = r[1];
+    e.querySelector('p').textContent = r[2];
+    w.appendChild(e);
+  });
+  app.appendChild(w);
+
+  const t2 = document.createElement('div'); t2.className = 'blockname'; t2.textContent = 'Quién manda sobre qué';
+  app.appendChild(t2);
+  const g = document.createElement('div'); g.className = 'grid2';
+  const cols = [
+    ['Julián y Vanesa deciden', [
+      'Son los únicos con <b>llave</b> y los únicos que tocan la <b>caja</b>.',
+      'Tienen autoridad sobre <b>fiambrería y producción de carne</b>: los dos son sectores propios.',
+      'Dan <b>orden y control al personal de carnicería</b> en lo que hace al local: basura, limpieza, orden y horarios de apertura y cierre.',
+      'Autorizan <b>cambios de precio y descuentos</b>. Nadie más, nunca.',
+      'Aceptan o rechazan <b>mercadería</b> en la recepción.',
+      'Deciden si un producto <b>sale de la venta</b>.',
+      'Los <b>primeros lugares del estacionamiento son del cliente</b>, todo el día. Ningún empleado, de ningún sector.'
+    ]],
+    ['La puerta de atrás', [
+      'Se cierra con la <b>puerta blanca</b> y queda cerrada.',
+      '<b>No se abre en todo el día.</b> Ni para ventilar, ni para recibir, ni un ratito.',
+      'Única excepción: <b>al terminar el turno</b>, para sacar la basura. Se saca, se controla el depósito y se vuelve a cerrar.',
+      'El que la deja abierta responde por lo que falte.'
+    ]]
+  ];
+  cols.forEach(c => {
+    const m = document.createElement('div'); m.className = 'minicard';
+    const hh = document.createElement('h3'); hh.textContent = c[0]; m.appendChild(hh);
+    const ul = document.createElement('ul');
+    c[1].forEach(li => { const l = document.createElement('li'); l.innerHTML = li; ul.appendChild(l); });
+    m.appendChild(ul); g.appendChild(m);
+  });
+  app.appendChild(g);
+
+  const t3 = document.createElement('div'); t3.className = 'blockname'; t3.textContent = 'Las tres líneas rojas';
+  app.appendChild(t3);
+  const n = document.createElement('div'); n.className = 'note red';
+  n.innerHTML = '<span class="nt">Se dicen el día 1 · el que las cruza se va</span>' +
+    '<b>1.</b> Vender algo que sabías que no estaba bien.<br>' +
+    '<b>2.</b> Maltratar o ningunear a un cliente.<br>' +
+    '<b>3.</b> Mentir o tapar un error.<br><br>' +
+    'Los pilares se aprenden y se corrigen. Estas tres no.';
+  app.appendChild(n);
+
+  const t5 = document.createElement('div'); t5.className = 'blockname'; t5.textContent = 'Cuando algo se rompe';
+  app.appendChild(t5);
+  const g3 = document.createElement('div'); g3.className = 'grid2';
+  const emg = [
+    ['Se corta la luz', ['<b>No abrir cámaras ni heladeras.</b> Cerradas aguantan horas; abiertas, minutos.', 'Anotar la hora exacta del corte.', 'Llamar a Nico o Jesi. La decisión de qué se tira <b>no es del encargado</b>.', 'Si vuelve: tomar temperatura de todo antes de seguir vendiendo.']],
+    ['Falta alguien', ['Avisar a Nico y Jesi <b>apenas se sabe</b>, no a la hora de entrar.', 'El local abre igual: la apertura la puede hacer cualquiera de los dos encargados.', '⚠ Sin tercera persona con llave, si faltan los dos encargados el local no abre. Pendiente de Nico.']],
+    ['Un cliente se pone pesado', ['No se discute. Se llama al encargado.', 'El encargado decide, y si hace falta llama a Nico o Jesi.', 'Nunca se sube el tono, ni aunque el cliente lo suba.']],
+    ['Un equipo de frío no anda', ['Cartel <b>NO VENDER</b> sobre el producto y separarlo.', 'Anotar temperatura y hora.', 'Avisar a Nico o Jesi en el momento, no al cierre.']]
+  ];
+  emg.forEach(c => {
+    const m = document.createElement('div'); m.className = 'minicard';
+    const hh = document.createElement('h3'); hh.textContent = c[0]; m.appendChild(hh);
+    const ul = document.createElement('ul');
+    c[1].forEach(li => { const l = document.createElement('li'); l.innerHTML = li; ul.appendChild(l); });
+    m.appendChild(ul); g3.appendChild(m);
+  });
+  app.appendChild(g3);
+
+  const t4 = document.createElement('div'); t4.className = 'blockname'; t4.textContent = 'Números de referencia';
+  app.appendChild(t4);
+  const g2 = document.createElement('div'); g2.className = 'grid2';
+  const refs = [
+    ['Horarios de llegada', ['Todos fichan <b>5 minutos antes</b> de su horario.', 'Encargado mañana <b>7:55</b> · fiambrería mañana <b>7:55</b>', 'Producción carne <b>10:55</b> · fiambrería tarde <b>15:55 a 00:00</b>', 'Encargado tarde <b>15:55 a 00:05</b> · nadie se queda más de 00:05', 'Se come <b>en el local</b>, sin salir del puesto, en los ratos flojos']],
+    ['Frío', ['Refrigerados: <b>0 a 5 °C</b>', 'Congelados: <b>–18 °C o menos</b>', 'Fuera de rango: cartel <b>NO VENDER</b> y llamar a Nico o Jesi', '⚠ Hoy sólo fiambrería toma temperatura, y sólo de su mostrador. <b>Cámara de carne, freezer y exhibidoras no las mira nadie.</b> Pendiente de Nico.']],
+    ['Caja y pagos', ['Se cuenta <b>dos veces</b>, siempre', 'Fondo contado <b>antes de la primera venta</b>', 'Toda diferencia se anota, <b>aunque sea de $500</b>', 'Foto del cierre manual y por sistema <b>a Jesi y a Nico</b>', 'Ningún pedido se manda <b>sin que Nico o Jesi lo aprueben</b> en el grupo']]
+  ];
+  refs.forEach(c => {
+    const m = document.createElement('div'); m.className = 'minicard';
+    const hh = document.createElement('h3'); hh.textContent = c[0]; m.appendChild(hh);
+    const ul = document.createElement('ul');
+    c[1].forEach(li => { const l = document.createElement('li'); l.innerHTML = li; ul.appendChild(l); });
+    m.appendChild(ul); g2.appendChild(m);
+  });
+  app.appendChild(g2);
+}
+
+/* ---------- quién sos ---------- */
+function pintarQuien(){
+  const b = document.getElementById('btnQuien');
+  document.getElementById('quienTxt').textContent = yo ? yo.nombre : 'Entrar';
+  b.classList.toggle('set', !!yo);
+}
+function abrirQuien(){
+  modal('¿Qué puesto hacés hoy?', 'Elegí tu puesto y vas directo a tu lista.', m => {
+    PUESTOS.forEach(p => {
+      const b = document.createElement('button');
+      b.className = 'pick' + (p.jefe ? ' jefe' : '');
+      b.innerHTML = '<span class="av"></span><span class="nm"><b></b><small></small></span><span class="rol"></span>';
+      b.querySelector('.av').textContent = p.nombre.slice(0,1);
+      b.querySelector('.nm b').textContent = p.nombre;
+      b.querySelector('.nm small').textContent = p.turno;
+      b.querySelector('.rol').textContent = p.horario;
+      b.onclick = () => pedirNombre(p);
+      m.appendChild(b);
+    });
+  });
+}
+
+function pedirNombre(p){
+  modal('¿Cómo te llamás?', p.nombre + ' · ' + p.turno + ' · ' + p.horario, m => {
+    const guardar = n => {
+      n = (n || '').trim();
+      if(!n) return;
+      yo = {puesto: p.id, nombre: n};
+      try{ localStorage.setItem('pf_yo', JSON.stringify(yo)); }catch(e){}
+      listaActiva = p.id;
+      pintarQuien(); cerrarModal(); render(); window.scrollTo(0,0);
+    };
+    if(p.jefe){
+      NOMBRES_ENC.forEach(n => {
+        const b = document.createElement('button');
+        b.className = 'pick jefe';
+        b.innerHTML = '<span class="av"></span><span class="nm"><b></b></span>';
+        b.querySelector('.av').textContent = n.slice(0,1);
+        b.querySelector('.nm b').textContent = n;
+        b.onclick = () => guardar(n);
+        m.appendChild(b);
+      });
+    }
+    const inp = document.createElement('input');
+    inp.className = 'nomInput';
+    inp.type = 'text';
+    inp.placeholder = p.jefe ? 'Otro nombre' : 'Tu nombre';
+    inp.onkeydown = e => { if(e.key === 'Enter') guardar(inp.value); };
+    m.appendChild(inp);
+    const ok = document.createElement('button');
+    ok.className = 'btn pri'; ok.textContent = 'Entrar';
+    ok.onclick = () => guardar(inp.value);
+    m.appendChild(ok);
+    const atras = document.createElement('button');
+    atras.className = 'btn'; atras.textContent = 'Volver';
+    atras.onclick = abrirQuien;
+    m.appendChild(atras);
+    setTimeout(() => { if(!p.jefe) inp.focus(); }, 60);
+  });
+}
+
+let scrimEl = null;
+function modal(titulo, sub, fill){
+  cerrarModal();
+  scrimEl = document.createElement('div');
+  scrimEl.className = 'scrim';
+  scrimEl.innerHTML = '<div class="modal"><div class="mh"><h3></h3><p></p></div><div class="mb"></div></div>';
+  scrimEl.querySelector('h3').textContent = titulo;
+  scrimEl.querySelector('p').textContent = sub;
+  fill(scrimEl.querySelector('.mb'));
+  scrimEl.onclick = e => { if(e.target === scrimEl) cerrarModal(); };
+  document.body.appendChild(scrimEl);
+}
+function cerrarModal(){ if(scrimEl){ scrimEl.remove(); scrimEl = null; } }
+document.addEventListener('keydown', e => { if(e.key === 'Escape') cerrarModal(); });
+
+/* ---------- mensaje de traspaso ---------- */
+function textoTraspaso(){
+  const L = LISTAS.find(x => x.id === listaActiva);
+  const st = estadoLista(L.id);
+  const p = progreso(L);
+  const fechaTxt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+  let s = '*' + L.nombre.toUpperCase() + '* · ' + fechaTxt + '\n';
+  s += L.horario + ' · ' + (yo ? nombreDe(yo) : 'sin firmar') + '\n';
+  s += '───────────────\n';
+  s += 'Hecho: ' + p.hechas + ' de ' + p.total + '\n';
+
+  const faltan = [];
+  (L.bloques||[]).forEach(b => b.items.forEach(it => {
+    if(it.tipo === 'campo'){ if(!st.campos[it.id]) faltan.push(it.lab); }
+    else if(!st.items[it.id]) faltan.push(it.txt + (it.crit ? ' ⚠' : ''));
+  }));
+  if(faltan.length){
+    s += '\n*PENDIENTE:*\n';
+    faltan.forEach(f => s += '· ' + f + '\n');
+  } else {
+    s += '\nSin pendientes ✓\n';
+  }
+
+  const datos = [];
+  (L.bloques||[]).forEach(b => b.items.forEach(it => {
+    if(it.tipo === 'campo' && st.campos[it.id]) datos.push(it.lab + ': ' + st.campos[it.id] + (it.ph ? ' ' + it.ph : ''));
+  }));
+  if(datos.length){ s += '\n*DATOS:*\n'; datos.forEach(d => s += '· ' + d + '\n'); }
+
+  if(st.nota && st.nota.trim()){ s += '\n*NOVEDADES:*\n' + st.nota.trim() + '\n'; }
+  if(st.cierre){
+    s += '\n' + (st.cierre.estado === 'ok' ? '✅ Turno cerrado, todo hecho' : '⚠ Turno cerrado CON PENDIENTES');
+    s += '\n' + st.cierre.by + ' · ' + st.cierre.at + '\n';
+  } else {
+    s += '\n⚠ Turno todavía sin cerrar\n';
+  }
+  return s;
+}
+
+document.getElementById('btnWA').onclick = () => {
+  const txt = textoTraspaso();
+  modal('Mensaje de traspaso', 'Copialo y pegalo en el grupo. Lo manda el que entra, no el que se va.', m => {
+    const pre = document.createElement('pre'); pre.className = 'msg'; pre.textContent = txt;
+    m.appendChild(pre);
+    const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:8px';
+    const cop = document.createElement('button'); cop.className = 'btn pri'; cop.textContent = 'Copiar';
+    cop.onclick = async () => {
+      try{ await navigator.clipboard.writeText(txt); cop.textContent = 'Copiado ✓'; }
+      catch(e){
+        const r = document.createRange(); r.selectNodeContents(pre);
+        const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r);
+        cop.textContent = 'Seleccionado — copialo';
+      }
+    };
+    const cer = document.createElement('button'); cer.className = 'btn'; cer.textContent = 'Cerrar';
+    cer.onclick = cerrarModal;
+    row.appendChild(cop); row.appendChild(cer); m.appendChild(row);
+  });
+};
+
+/* ---------- arranque ---------- */
+document.getElementById('btnQuien').onclick = abrirQuien;
+document.getElementById('fechaHoy').textContent =
+  new Date(hoy + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+
+(function(){
+  if(yo){ listaActiva = yo.puesto; return; }
+  const h = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Argentina/Cordoba'})).getHours();
+  listaActiva = (h >= 7 && h < 16) ? 'enc_m' : 'enc_t';
+})();
+
+pintarQuien();
+render();
+if(!yo) setTimeout(abrirQuien, 200);
+setSync('conectando…');
+conectar();
+</script>
