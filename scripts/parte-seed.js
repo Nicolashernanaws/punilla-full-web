@@ -35,6 +35,40 @@ function pinAlAzar() {
   return String(crypto.randomInt(0, 10000)).padStart(4, '0');
 }
 
+/**
+ * 🔴 UN PIN POR PERSONA, NO POR FILA. Julián está cargado en los dos turnos
+ * (enc_m y enc_t) para poder rotar, pero es UNA persona: darle un PIN distinto
+ * por turno lo obligaría a acordarse de cuál va con cuál, y el que se equivoca
+ * dos veces se come el freno de 15 minutos justo cuando entra a trabajar.
+ * Elige el puesto en la pantalla; el PIN es suyo y no cambia.
+ *
+ * 🔴 Y NO SE REPITE DENTRO DE UN PUESTO. El login prueba el PIN contra todas
+ * las personas de ese puesto y se queda con la primera que cierra: si Julián y
+ * Vanesa sacaran el mismo número, uno de los dos firmaría con el nombre del
+ * otro y el parte diría que lo hizo quien no lo hizo.
+ */
+function repartirPines(personas) {
+  const porPersona = new Map();
+  const usadosPorPuesto = new Map();
+  for (const p of personas) {
+    if (!usadosPorPuesto.has(p.puesto)) usadosPorPuesto.set(p.puesto, new Set());
+  }
+  for (const p of personas) {
+    if (!porPersona.has(p.nombre)) {
+      const puestosDeEsta = personas.filter((x) => x.nombre === p.nombre).map((x) => x.puesto);
+      let pin;
+      let intentos = 0;
+      do {
+        pin = pinAlAzar();
+        if (++intentos > 500) throw new Error('no encontré un PIN libre');
+      } while (puestosDeEsta.some((q) => usadosPorPuesto.get(q).has(pin)));
+      for (const q of puestosDeEsta) usadosPorPuesto.get(q).add(pin);
+      porPersona.set(p.nombre, pin);
+    }
+  }
+  return porPersona;
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const confirmar = args.includes('--confirmar');
@@ -61,9 +95,13 @@ async function main() {
     return;
   }
 
+  // El PIN se reparte por PERSONA y después se aplica a todas sus filas: los que
+  // ya estaban cargados en otro puesto no cuentan acá, porque sólo se le asigna
+  // PIN a lo que se crea.
+  const pines = repartirPines(aCrear);
   const nuevos = [];
   for (const p of aCrear) {
-    const pin = pinAlAzar();
+    const pin = pines.get(p.nombre);
     const { rows } = await query(
       `INSERT INTO parte_persona (nombre, puesto, pin_hash) VALUES ($1,$2,$3) RETURNING id`,
       [p.nombre, p.puesto, hashPin(pin)],
@@ -87,11 +125,18 @@ async function main() {
     return;
   }
 
-  console.log('\n' + '='.repeat(46));
+  console.log('\n' + '='.repeat(52));
   console.log('  PIN — SE MUESTRAN UNA SOLA VEZ. Anotalos ahora.');
-  console.log('='.repeat(46));
-  for (const n of nuevos) console.log(`  ${n.puesto.padEnd(7)} ${n.nombre.padEnd(10)} ${n.pin}`);
-  console.log('='.repeat(46));
+  console.log('='.repeat(52));
+  // Una línea por persona: el mismo PIN le sirve en todos sus puestos.
+  const yaImpreso = new Set();
+  for (const n of nuevos) {
+    if (yaImpreso.has(n.nombre)) continue;
+    yaImpreso.add(n.nombre);
+    const puestos = nuevos.filter((x) => x.nombre === n.nombre).map((x) => x.puesto).join(' y ');
+    console.log(`  ${n.nombre.padEnd(10)} ${n.pin}    (${puestos})`);
+  }
+  console.log('='.repeat(52));
   console.log('  No quedan guardados en ningún lado. Si se pierde uno,');
   console.log('  se regenera con --reset "Nombre:puesto".\n');
 }
