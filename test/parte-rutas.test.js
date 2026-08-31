@@ -16,7 +16,7 @@ test('🔴 seis intentos seguidos devuelven 429 (criterio 5)', () => {
   // Un PIN de 4 dígitos son 10.000 combinaciones: sin freno se rompe en
   // minutos, y en los campos del parte hay montos de caja.
   const mw = rateLimitPorClave(5, 60_000);
-  const req = { ip: '1.2.3.4', body: { puesto: 'enc_m' } };
+  const req = { headers: {}, ip: '1.2.3.4', body: { puesto: 'enc_m' } };
   let ultimo = 0;
   const res = { status(c) { ultimo = c; return this; }, json() { return this; } };
   let pasaron = 0;
@@ -31,7 +31,7 @@ test('🔴 el freno es por IP Y PUESTO, no sólo por IP', () => {
   const mw = rateLimitPorClave(2, 60_000);
   const res = { status() { return this; }, json() { return this; } };
   let ok = 0;
-  const golpe = (puesto) => mw({ ip: '1.1.1.1', body: { puesto } }, res, () => ok++);
+  const golpe = (puesto) => mw({ headers: {}, ip: '1.1.1.1', body: { puesto } }, res, () => ok++);
   golpe('enc_m'); golpe('enc_m'); golpe('enc_m'); // el tercero se frena
   golpe('fiam_t');                                 // otro puesto, sigue pasando
   assert.equal(ok, 3);
@@ -41,7 +41,7 @@ test('la ventana del freno se libera con el tiempo', () => {
   const mw = rateLimitPorClave(1, 30);
   const res = { status() { return this; }, json() { return this; } };
   let ok = 0;
-  const req = { ip: '9.9.9.9', body: { puesto: 'prod' } };
+  const req = { headers: {}, ip: '9.9.9.9', body: { puesto: 'prod' } };
   mw(req, res, () => ok++);
   mw(req, res, () => ok++); // frenado
   return new Promise((r) => setTimeout(r, 45)).then(() => {
@@ -111,16 +111,16 @@ const { huella, FRENO_MAX, FRENO_MINUTOS } = require('../lib/parte-rutas');
 
 test('🔴 el freno de verdad cuenta en la base, no en memoria', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  assert.match(rutas, /SELECT COUNT\(\*\)[\s\S]{0,120}login_fallido/);
+  assert.match(rutas, /FROM parte_evento\s*\n\s*WHERE tipo = 'login_fallido'/);
   // Y se chequea ANTES de comparar el PIN, no después.
-  assert.match(rutas, /frenadoEnBase\(puesto, req\.ip\)[\s\S]{0,200}SELECT id, nombre, pin_hash/);
+  assert.match(rutas, /frenadoEnBase\(puesto, ipCliente\(req\)\)[\s\S]{0,200}SELECT id, nombre, pin_hash/);
 });
 
 test('🔴 se cuenta por puesto Y huella de IP, no sólo por puesto', () => {
   // Si fuera sólo por puesto, cualquiera podría dejar a Julián sin poder entrar
   // tirando PINs al azar desde afuera.
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  assert.match(rutas, /WHERE tipo = 'login_fallido' AND puesto = \$1 AND valor = \$2/);
+  assert.match(rutas, /COUNT\(\*\) FILTER \(WHERE valor = \$2\)::int AS por_ip/);
 });
 
 test('la IP no se guarda en claro', () => {
@@ -138,4 +138,37 @@ test('el intento fallido queda anotado en la línea de tiempo', () => {
 test('el freno son 5 intentos en 15 minutos', () => {
   assert.equal(FRENO_MAX, 5);
   assert.equal(FRENO_MINUTOS, 15);
+});
+
+// ── La IP del cliente (medido en produccion el 30/8) ────────────────────────
+const { ipCliente, FRENO_PUESTO_MAX } = require('../lib/parte-rutas');
+
+test('🔴 la IP sale del PRIMER X-Forwarded-For, no de req.ip', () => {
+  // Ocho intentos desde la misma máquina quedaron anotados con DOS huellas
+  // distintas: con `trust proxy 1` Express toma el último salto —el proxy de
+  // Railway, que rota— y el contador por IP nunca llegaba a cinco.
+  const req = { headers: { 'x-forwarded-for': '190.55.1.2, 10.0.0.7, 10.0.0.9' }, ip: '10.0.0.9' };
+  assert.equal(ipCliente(req), '190.55.1.2');
+});
+
+test('sin cabecera cae en req.ip', () => {
+  assert.equal(ipCliente({ headers: {}, ip: '1.2.3.4' }), '1.2.3.4');
+});
+
+test('sin nada devuelve cadena vacía, no rompe', () => {
+  assert.equal(ipCliente({ headers: {} }), '');
+});
+
+test('🔴 hay un tope por PUESTO además del de IP', () => {
+  // El primer X-Forwarded-For lo escribe el cliente y se puede falsificar
+  // rotándolo. Éste no se puede esquivar.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /por_puesto >= FRENO_PUESTO_MAX/);
+});
+
+test('el tope por puesto es alto a propósito', () => {
+  // Uno bajo dejaría a Julián sin poder entrar con que alguien tire PINs desde
+  // afuera. Con 30 cada 15 min, agotar las 10.000 combinaciones lleva 80+ horas.
+  assert.equal(FRENO_PUESTO_MAX, 30);
+  assert.ok(FRENO_PUESTO_MAX > FRENO_MAX * 4);
 });
