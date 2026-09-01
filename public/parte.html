@@ -421,6 +421,31 @@ const PUESTOS = [
   {id:'prod',  nombre:'Producción carne', turno:'Mediodía', horario:'10:55 – 15:00'},
 ];
 
+/**
+ * Cada sector tiene su propia URL, para que en el teléfono cada uno abra la
+ * suya y no vea la lista de puestos de los demás.
+ *
+ * ⚠️ ESTO ES COMODIDAD, NO SEGURIDAD. La separación de verdad es el PIN: un PIN
+ * de fiambrería no abre un puesto de encargado, y el puesto viaja en una cookie
+ * firmada que el cliente no puede editar. Entrar por /parte a secas y elegir el
+ * puesto de otro no sirve de nada sin su PIN. Esto es para que el que abre el
+ * link vaya derecho a lo suyo.
+ */
+const AREAS = {
+  encargado:  ['enc_m', 'enc_t'],
+  fiambreria: ['fiam_m', 'fiam_t'],
+  produccion: ['prod'],
+};
+const AREA_NOMBRE = {
+  encargado: 'Encargado', fiambreria: 'Fiambrería', produccion: 'Producción carne',
+};
+/** El último tramo de la URL. `/parte` a secas muestra todos (es el de Nico). */
+const AREA = (() => {
+  const t = location.pathname.replace(/\/+$/, '').split('/').pop();
+  return AREAS[t] ? t : null;
+})();
+const puestosVisibles = () => (AREA ? PUESTOS.filter((p) => AREAS[AREA].includes(p.id)) : PUESTOS);
+
 const T = (id,hora,txt,det,crit) => ({id,hora,txt,det:det||'',crit:!!crit});
 const F = (id,lab,sub,ph) => ({id,tipo:'campo',lab,sub:sub||'',ph:ph||''});
 
@@ -1208,8 +1233,16 @@ function pintarQuien(){
   b.classList.toggle('set', !!yo);
 }
 function abrirQuien(){
-  modal('¿Qué puesto hacés hoy?', 'Elegí tu puesto y poné tu PIN.', m => {
-    PUESTOS.forEach(p => {
+  const visibles = puestosVisibles();
+  const titulo = visibles.length === 1 ? 'Entrar' : '¿Qué turno hacés hoy?';
+  const sub = AREA
+    ? AREA_NOMBRE[AREA] + ' · elegí tu turno y poné tu PIN.'
+    : 'Elegí tu puesto y poné tu PIN.';
+  modal(titulo, sub, m => {
+    /* Con un solo puesto no se hace elegir de una lista de uno: va derecho al
+       PIN. Un paso de más en la caja es un paso que alguien se saltea. */
+    if (visibles.length === 1) { setTimeout(() => pedirPin(visibles[0]), 0); return; }
+    visibles.forEach(p => {
       const b = document.createElement('button');
       b.className = 'pick' + (p.jefe ? ' jefe' : '');
       b.innerHTML = '<span class="av"></span><span class="nm"><b></b><small></small></span><span class="rol"></span>';

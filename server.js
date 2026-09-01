@@ -13,6 +13,7 @@ const { ventanaAbierta, armarPadron, CIERRE, SORTEO_TEXTO } = require('./lib/sor
 const { query } = require('./db/db');
 const { bootstrap } = require('./db/bootstrap');
 const { crearRutasParte } = require('./lib/parte-rutas');
+const { crearRutasSemana } = require('./lib/semana-rutas');
 
 const app = express();
 app.set('trust proxy', 1); // Railway está detrás de proxy
@@ -332,8 +333,33 @@ app.use(
     secure: process.env.NODE_ENV === 'production',
   }),
 );
-app.get('/parte', (_req, res) => res.sendFile(path.join(PUBLIC, 'parte.html')));
+// Una URL por sector: en el teléfono cada uno abre la suya y va derecho a lo
+// suyo, sin ver la lista de puestos de los demás. Es la MISMA página; lo que
+// cambia es qué puestos ofrece el login, y eso lo decide el front mirando la
+// URL. La separación de verdad la hace el PIN, no la ruta.
+for (const ruta of ['/parte', '/parte/encargado', '/parte/fiambreria', '/parte/produccion']) {
+  app.get(ruta, (_req, res) => res.sendFile(path.join(PUBLIC, 'parte.html')));
+}
 app.get('/parte/admin', (_req, res) => res.sendFile(path.join(PUBLIC, 'parte-admin.html')));
+
+// ---------- La Semana Full ----------
+//
+// El plan de ofertas rotativas: WF-15 propone el domingo 18:00, Nico aprueba
+// desde el celular en cinco minutos, WF-16 publica el lunes 7:30.
+//
+// Vive acá y no en Airtable porque esa base llegó a su límite de registros el
+// 31/08/2026 (`422 · over its record limits`) y la regla del proyecto prohíbe
+// borrar el historial de precios para hacer lugar. Un plan semanal que no puede
+// escribir el domingo a las 18:00 no es un plan.
+app.use(
+  '/semana',
+  crearRutasSemana({
+    secret: process.env.CODE_SECRET || 'dev-secret-inseguro',
+    adminKey: ADMIN_KEY,
+    secure: process.env.NODE_ENV === 'production',
+  }),
+);
+app.get('/semana', (_req, res) => res.sendFile(path.join(PUBLIC, 'semana.html')));
 
 // ---------- páginas ----------
 app.get('/', (_req, res) => res.sendFile(path.join(PUBLIC, 'index.html')));

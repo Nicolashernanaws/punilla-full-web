@@ -70,3 +70,36 @@ test('se conserva lo que el handoff pidió no tocar', () => {
   assert.ok(html.includes('Armar traspaso') || html.includes('btnWA'), 'traspaso');
   assert.match(html, /LISTAS\.filter\(L => L\.id === yo\.puesto \|\| L\.reglas\)/);
 });
+
+// ── Una URL por sector (31/8) ───────────────────────────────────────────────
+//
+// Nico: "quiero que encargado tenga una url y fiambrería otra, no compartir".
+// En el teléfono cada uno abre la suya y va derecho a lo suyo.
+//
+// ⚠️ ES COMODIDAD, NO SEGURIDAD: la separación de verdad la hace el PIN, y está
+// probada contra producción (un PIN de fiambrería no abre un puesto de
+// encargado). Entrar por /parte y elegir el puesto de otro no sirve sin su PIN.
+test('cada sector tiene su URL y ve sólo sus puestos', () => {
+  assert.match(html, /encargado:\s*\['enc_m', 'enc_t'\]/);
+  assert.match(html, /fiambreria:\s*\['fiam_m', 'fiam_t'\]/);
+  assert.match(html, /produccion:\s*\['prod'\]/);
+  // El área sale de la URL, no de algo que se pueda tipear.
+  assert.match(html, /location\.pathname/);
+});
+
+test('🔴 /parte a secas sigue mostrando todos', () => {
+  // Es el que usa Nico: si filtrara, se quedaría sin poder entrar a ninguno.
+  assert.match(html, /return AREAS\[t\] \? t : null;/);
+  assert.match(html, /AREA \? PUESTOS\.filter[\s\S]{0,40}: PUESTOS/);
+});
+
+test('con un solo puesto va derecho al PIN', () => {
+  // Producción tiene uno solo: hacer elegir de una lista de uno es un paso de
+  // más, y un paso de más en la caja es un paso que alguien se saltea.
+  assert.match(html, /visibles\.length === 1[\s\S]{0,80}pedirPin\(visibles\[0\]\)/);
+});
+
+test('el server sirve la misma página en las cuatro rutas', () => {
+  const srv = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(srv, /'\/parte', '\/parte\/encargado', '\/parte\/fiambreria', '\/parte\/produccion'/);
+});
