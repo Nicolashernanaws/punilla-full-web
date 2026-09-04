@@ -804,6 +804,13 @@ async function traerDia(){
       return;
     }
     yo = {puesto: d.puesto, nombre: d.nombre};
+    /* 🔴 EL MODAL SE COMÍA LOS CLICKS. Si el localStorage está vacío pero la
+       cookie sigue viva, el arranque abría el selector de turno y después esto
+       dibujaba la lista DEBAJO: el `.scrim` es fixed, inset 0 y z-index 50, así
+       que la lista se veía entera y estaba muerta. Medido en producción con
+       elementFromPoint() sobre la primera tarea: el click lo recibía `.pick`.
+       Nico, 4/9: "no me deja tildar, sólo editar ciertos campos". */
+    if(modalDeLogin) cerrarModal();
     try{ localStorage.setItem('pf_yo', JSON.stringify(yo)); }catch(e){}
     listaActiva = d.puesto;
     ESTADO[d.puesto] = {items: d.items, campos: d.campos, nota: d.nota, cierre: d.cierre};
@@ -1331,6 +1338,7 @@ function abrirQuien(){
       m.appendChild(b);
     });
   });
+  modalDeLogin = true;
 }
 
 /* 🔴 EL NOMBRE VIENE DEL SERVIDOR, NO LO ESCRIBE LA PERSONA.
@@ -1402,6 +1410,7 @@ function pedirPin(p){
     m.appendChild(row);
     setTimeout(() => inp.focus(), 60);
   });
+  modalDeLogin = true;
 }
 
 /* Salir cierra la sesión del servidor: si sólo se borrara el localStorage, la
@@ -1441,7 +1450,16 @@ function modal(titulo, sub, fill){
   scrimEl.onclick = e => { if(e.target === scrimEl) cerrarModal(); };
   document.body.appendChild(scrimEl);
 }
-function cerrarModal(){ if(scrimEl){ scrimEl.remove(); scrimEl = null; } }
+/**
+ * ¿Lo que está abierto es el pedido de PIN?
+ *
+ * Hace falta distinguirlo de los otros modales —el traspaso, el aviso de
+ * cierre— porque sólo éste se cierra solo cuando el servidor confirma la
+ * sesión. Cerrarle el del traspaso a alguien que está copiando el mensaje sería
+ * peor que el problema que arregla.
+ */
+let modalDeLogin = false;
+function cerrarModal(){ if(scrimEl){ scrimEl.remove(); scrimEl = null; } modalDeLogin = false; }
 document.addEventListener('keydown', e => { if(e.key === 'Escape') cerrarModal(); });
 
 /* ---------- mensaje de traspaso ---------- */
@@ -1516,7 +1534,11 @@ document.getElementById('btnQuien').onclick = () => { if(yo) salir(); else abrir
 
 pintarQuien();
 render();
-if(!yo) setTimeout(abrirQuien, 200);
+/* Se pide el PIN recién cuando ya sabemos que NO hay sesión. A los 200 ms
+   todavía no contestó el servidor: con la cookie viva era un modal que aparecía
+   y se cerraba solo en la cara. Si la red está caída no salta solo, pero queda
+   el cartel con «Entrar» a mano. */
+setTimeout(() => { if(!yo) abrirQuien(); }, 1200);
 setSync('conectando…');
 conectar();
 </script>

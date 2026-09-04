@@ -196,3 +196,36 @@ test('🔴 no se llama a ninguna función que no exista', () => {
 
   assert.deepEqual(huerfanas, [], 'se llaman pero no existen: ' + huerfanas.join(', '));
 });
+
+// ── El modal tapaba la lista y se comia los clicks (4/9) ────────────────────
+//
+// Nico: "Se supone que deberia dejar tildar el check al lado de la tarea? xq a
+// mi no me deja / solo editar ciertos campos como lo del dinero de la caja".
+//
+// 🔴 QUE PASABA. Al arrancar, `yo` sale del localStorage. Si ahi no hay nada
+// pero la cookie del servidor SIGUE VIVA, pasaba esto:
+//
+//   1. yo = null            -> se dibuja el cartel del PIN
+//   2. setTimeout(abrirQuien) -> se abre el selector de turno
+//   3. traerDia() responde  -> hay sesion, se dibuja la lista entera
+//   4. nadie cierra el modal
+//
+// Y el `.scrim` es `position:fixed; inset:0; z-index:50`: la lista quedaba
+// dibujada DEBAJO, visible y muerta. Medido en produccion con
+// `document.elementFromPoint()` sobre la primera tarea: el click lo recibia
+// `.pick`, un boton del modal, no la tarea. Los campos de la derecha asomaban
+// por fuera del recuadro y por eso parecian los unicos que andaban.
+
+test('🔴 si el servidor confirma la sesion se cierra el pedido de PIN', () => {
+  // El flag distingue el modal del login de los otros (traspaso, cierre): sólo
+  // el del login se cierra solo.
+  assert.match(html, /let modalDeLogin = false;/);
+  assert.match(html, /function cerrarModal\(\)\{[\s\S]{0,120}modalDeLogin = false/);
+  assert.match(html, /async function traerDia[\s\S]{0,1600}if\(modalDeLogin\) cerrarModal\(\);/);
+});
+
+test('el pedido de PIN del arranque espera la respuesta del servidor', () => {
+  // Con la cookie viva, abrirlo a los 200 ms era un modal que aparecia y se
+  // cerraba solo en la cara de la persona.
+  assert.match(html, /setTimeout\(\(\) => \{ if\(!yo\) abrirQuien\(\); \}, 1200\)/);
+});
