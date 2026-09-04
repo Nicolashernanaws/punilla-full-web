@@ -171,12 +171,16 @@ test('🔴 no se llama a ninguna función que no exista', () => {
   // Y los PARÁMETROS, que dentro del cuerpo se llaman como cualquier función:
   // `modal(titulo, sub, fill)` llama a fill() y fill no se declara en ningún
   // lado. Sin esto el test se llenaría de falsos positivos.
-  for (const m of js.matchAll(/function\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) {
-    for (const a of m[1].split(',')) {
-      const nom = a.trim().split(/[\s=]/)[0];
-      if (nom) definidas.add(nom);
+  const sumarParametros = (lista) => {
+    for (const a of lista.split(',')) {
+      const nom = a.trim().replace(/^\.\.\./, '').split(/[\s=)\]}]/)[0];
+      if (/^[A-Za-z_$][\w$]*$/.test(nom)) definidas.add(nom);
     }
-  }
+  };
+  for (const m of js.matchAll(/function\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) sumarParametros(m[1]);
+  // Y los de las flecha: `new Promise((listo) => ...)` define `listo`, que
+  // despues se llama como cualquier funcion.
+  for (const m of js.matchAll(/\(([^()]*)\)\s*=>/g)) sumarParametros(m[1]);
 
   // Palabras del lenguaje y del navegador. Sólo hace falta listar las que
   // empiezan en minúscula: el patrón de abajo no toma las que van en mayúscula
@@ -248,12 +252,16 @@ test('🔴 el tablero no llama a ninguna funcion que no exista', () => {
     [...js.matchAll(/(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/g)].map((m) => m[1]),
   );
   for (const m of js.matchAll(/([A-Za-z_$][\w$]*)\s*(?:=>|=\s*(?:async\s*)?function)/g)) definidas.add(m[1]);
-  for (const m of js.matchAll(/function\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) {
-    for (const a of m[1].split(',')) {
-      const nom = a.trim().split(/[\s=]/)[0];
-      if (nom) definidas.add(nom);
+  const sumarParametros = (lista) => {
+    for (const a of lista.split(',')) {
+      const nom = a.trim().replace(/^\.\.\./, '').split(/[\s=)\]}]/)[0];
+      if (/^[A-Za-z_$][\w$]*$/.test(nom)) definidas.add(nom);
     }
-  }
+  };
+  for (const m of js.matchAll(/function\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) sumarParametros(m[1]);
+  // Y los de las flecha: `new Promise((listo) => ...)` define `listo`, que
+  // despues se llama como cualquier funcion.
+  for (const m of js.matchAll(/\(([^()]*)\)\s*=>/g)) sumarParametros(m[1]);
 
   const NATIVAS = new Set([
     'if', 'for', 'while', 'switch', 'catch', 'do', 'else', 'return', 'typeof',
