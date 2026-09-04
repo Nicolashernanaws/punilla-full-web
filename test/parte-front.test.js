@@ -280,3 +280,17 @@ test('🔴 el tablero no llama a ninguna funcion que no exista', () => {
 
   assert.deepEqual(huerfanas, [], 'se llaman pero no existen: ' + huerfanas.join(', '));
 });
+
+test('🔴 el "sin sesion" del tablero llega a quien pide el PIN', () => {
+  // cargar() tiene su propio catch y se lo tragaba: cargarOEntrar() nunca
+  // entraba en su rama de error, no llamaba a entrar(), el formulario quedaba
+  // sin onsubmit y el navegador lo mandaba solo al apretar Enter.
+  assert.match(admin, /if \(e instanceof SinSesion\) throw e;/);
+});
+
+test('🔴 hidden le gana al estilo en el tablero', () => {
+  // Estaba como style="display:grid" inline y le ganaba a [hidden]: el cuadro
+  // del PIN se veia siempre, aunque el atributo estuviera puesto.
+  assert.match(admin, /\[hidden\]\{display:none !important\}/);
+  assert.doesNotMatch(admin, /<form id="login" hidden style=/);
+});

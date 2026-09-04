@@ -55,6 +55,14 @@
   table { width: 100%; border-collapse: collapse; font-size: .9rem; }
   th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--borde); }
   td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 🔴 `hidden` PIERDE CONTRA UN style INLINE. Esto estaba como
+   style="display:grid" en el <form> y el cuadro del PIN se veía siempre, aunque
+   el atributo hidden estuviera puesto. Las reglas van acá y el !important deja
+   que hidden mande. */
+[hidden]{display:none !important}
+#login{max-width:20rem;margin:3rem auto;display:grid;gap:.6rem}
+#login input{padding:.6rem;font-size:1.1rem}
 </style>
 </head>
 <body>
@@ -70,7 +78,7 @@
   <!-- El PIN se pide acá adentro y no con window.prompt: el cuadro gris del
        navegador en el teléfono no deja ver de qué se trata, no se puede estilar
        y no abre el teclado numérico. -->
-  <form id="login" hidden style="max-width:20rem;margin:3rem auto;display:grid;gap:.6rem">
+  <form id="login" hidden>
     <label for="pin" style="font-weight:600">PIN del tablero</label>
     <input type="password" id="pin" inputmode="numeric" autocomplete="off"
            pattern="[0-9]*" placeholder="6 dígitos">
@@ -236,6 +244,11 @@ async function cargar() {
     }</tr>`).join('')}</tbody></table>`;
     $('#estado').textContent = '';
   } catch (e) {
+    /* 🔴 EL "SIN SESIÓN" TIENE QUE SALIR DE ACÁ. Este catch se lo tragaba, así
+       que cargarOEntrar() nunca entraba en su rama de error y no llamaba a
+       entrar(): el formulario quedaba sin onsubmit y al apretar Enter el
+       navegador lo mandaba solo, recargando la página. */
+    if (e instanceof SinSesion) throw e;
     $('#estado').textContent = e.message;
   }
 }
@@ -257,6 +270,8 @@ async function cargarOEntrar() {
     $('#salir').hidden = false;
   } catch (e) {
     if (!(e instanceof SinSesion)) { $('#estado').textContent = e.message; return; }
+    $('#estado').textContent = '';
+    $('#salir').hidden = true;
     if (await entrar()) { await cargar(); $('#salir').hidden = false; }
   }
 }
