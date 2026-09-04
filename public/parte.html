@@ -446,6 +446,32 @@ const AREA = (() => {
 })();
 const puestosVisibles = () => (AREA ? PUESTOS.filter((p) => AREAS[AREA].includes(p.id)) : PUESTOS);
 
+/**
+ * ¿Este puesto NO es del área de la URL que se abrió?
+ *
+ * Pasa cuando alguien abre el link de fiambrería con la sesión de encargado
+ * todavía viva: la cookie dura 16 h. La cookie no se toca —perdería la sesión
+ * sin haber pedido nada— pero en esta URL no se le dibuja nada suyo.
+ */
+function fueraDelArea(puesto){
+  return AREA && !AREAS[AREA].includes(puesto);
+}
+
+/**
+ * Con qué lista arranca la pantalla antes de que conteste el servidor.
+ *
+ * Antes arrancaba siempre en enc_m o enc_t según la hora: en /parte/fiambreria
+ * la primera pantalla era, literalmente, la lista del encargado.
+ *
+ * Los ids de cada área están en orden mañana, tarde.
+ */
+function primeraDelArea(){
+  const h = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Argentina/Cordoba'})).getHours();
+  const ids = AREA ? AREAS[AREA] : ['enc_m','enc_t'];
+  if(ids.length === 1) return ids[0];
+  return (h >= 7 && h < 16) ? ids[0] : ids[1];
+}
+
 const T = (id,hora,txt,det,crit) => ({id,hora,txt,det:det||'',crit:!!crit});
 const F = (id,lab,sub,ph) => ({id,tipo:'campo',lab,sub:sub||'',ph:ph||''});
 
@@ -659,6 +685,7 @@ let listaActiva = 'enc_m', yo = null;
    cookie firmada: si no hay sesión, /api/dia devuelve 401 y se pide el PIN. */
 try{ yo = JSON.parse(localStorage.getItem('pf_yo')||'null'); }catch(e){ yo = null; }
 if(yo && (!yo.puesto || !PUESTOS.some(p => p.id === yo.puesto))) yo = null;
+if(yo && fueraDelArea(yo.puesto)) yo = null;
 const miPuesto = () => yo ? PUESTOS.find(p => p.id === yo.puesto) : null;
 const soyJefe = () => { const p = miPuesto(); return !!(p && p.jefe); };
 
@@ -689,7 +716,17 @@ async function api(ruta, opts){
     headers: {'Content-Type':'application/json'},
     credentials: 'same-origin'
   }, opts || {}));
-  if(r.status === 401){ yo = null; pintarQuien(); abrirQuien(); throw new Error('sin_sesion'); }
+  if(r.status === 401){
+    yo = null;
+    try{ localStorage.removeItem('pf_yo'); }catch(e){}
+    pintarQuien(); render();
+    /* 🔴 NO PISAR UN MODAL ABIERTO. El poll corre cada 20 s: si la persona está
+       tecleando su PIN cuando entra uno, esto la devolvía al selector de turno y
+       tenía que empezar de nuevo. Cuatro dígitos en un teléfono, con las manos
+       frías y a las siete de la mañana, tardan más de 20 segundos. */
+    if(!scrimEl) abrirQuien();
+    throw new Error('sin_sesion');
+  }
   if(!r.ok) throw new Error('http_' + r.status);
   return r.json();
 }
@@ -755,6 +792,17 @@ async function traerDia(){
   try{
     const d = await api('dia');
     hoy = d.fecha;
+    /* 🔴 LA COOKIE ES DE OTRA ÁREA. El chequeo del arranque mira el
+       localStorage, que es sólo una pista; ésta es la respuesta del servidor. Si
+       la sesión viva no es de esta URL, no se adopta: se pide el PIN del área
+       que abrió. Si lo pone, el login le reemplaza la cookie. */
+    if(fueraDelArea(d.puesto)){
+      yo = null;
+      try{ localStorage.removeItem('pf_yo'); }catch(e){}
+      pintarQuien(); render(); setSync('al día ✓');
+      abrirQuien();
+      return;
+    }
     yo = {puesto: d.puesto, nombre: d.nombre};
     try{ localStorage.setItem('pf_yo', JSON.stringify(yo)); }catch(e){}
     listaActiva = d.puesto;
@@ -785,7 +833,10 @@ async function conectar(){
 function renderTabs(){
   const c = document.getElementById('tabs');
   c.innerHTML = '';
-  const visibles = !yo ? LISTAS
+  /* 🔴 SIN SESIÓN, SÓLO REGLAS. Acá decía `!yo ? LISTAS`: sin sesión dibujaba
+     las OCHO solapas, las de las otras áreas incluidas. Ver pedidoDePin(). Las
+     Reglas sí quedan: son del local y las tiene que poder leer cualquiera. */
+  const visibles = !yo ? LISTAS.filter(L => L.reglas)
     : LISTAS.filter(L => L.id === yo.puesto || L.reglas);
   visibles.forEach(L => {
     const b = document.createElement('button');
@@ -815,12 +866,38 @@ function progreso(L){
 
 function nombreDe(v){ return v && v.n ? v.n : (v || '—'); }
 
+/**
+ * Lo que se ve cuando todavía no hay sesión.
+ *
+ * 🔴 ACÁ IBA LA LISTA ENTERA. `renderTabs()` devolvía LISTAS completo sin sesión
+ * y `render()` dibujaba el checklist detrás del modal del PIN: el que abría el
+ * link de fiambrería veía las tareas del encargado y de producción, y las podía
+ * leer enteras sin escribir un dígito. Nico, 4/9: "entre ellos se ven las tareas
+ * y no pide el pin".
+ *
+ * La API nunca largó un dato —sin cookie devuelve 401— pero los TEXTOS de las
+ * tareas están en este archivo. Con el HTML alcanzaba.
+ */
+function pedidoDePin(){
+  const d = document.createElement('div');
+  d.className = 'note';
+  d.style.marginTop = '26px';
+  d.innerHTML = '<span class="nt">Poné tu PIN</span>';
+  const s = document.createElement('span');
+  s.textContent = AREA
+    ? 'Esta es la lista de ' + AREA_NOMBRE[AREA] + '. Tocá «Entrar» arriba a la derecha y poné tu PIN para verla.'
+    : 'Tocá «Entrar» arriba a la derecha, elegí tu puesto y poné tu PIN.';
+  d.appendChild(s);
+  return d;
+}
+
 function render(){
   renderTabs();
   const L = LISTAS.find(x => x.id === listaActiva);
   const app = document.getElementById('app');
   app.innerHTML = '';
-  document.getElementById('btnWA').style.display = L.reglas ? 'none' : '';
+  document.getElementById('btnWA').style.display = (L.reglas || !yo) ? 'none' : '';
+  if(!yo && !L.reglas){ app.appendChild(pedidoDePin()); return; }
   if(L.reglas){ renderReglas(app); return; }
 
   const st = estadoLista(L.id);
@@ -1337,6 +1414,75 @@ async function salir(){
   pintarQuien(); render(); abrirQuien();
 }
 
+/* ---------- modal ---------- */
+/*
+ * 🔴 ESTO FALTABA Y LA PÁGINA NO SERVÍA PARA NADA. Al portar el front del
+ * artifact me llevé puesto este bloque entero: `modal()`, `cerrarModal()` y
+ * `textoTraspaso()`. Se usan en catorce lugares, así que tocar «Entrar» tiraba
+ * `ReferenceError: modal is not defined` y el pedido de PIN NUNCA se abría. Con
+ * eso, nadie podía entrar: ni Julián, ni Abril, ni nadie. Nico, 4/9: "no pide
+ * el pin".
+ *
+ * Se me pasó porque verifiqué los siete criterios contra la API con curl y no
+ * abrí la página en un navegador ni una vez. La API estaba perfecta. La pantalla
+ * no arrancaba.
+ *
+ * Restaurado tal cual del v14 (`parte-diario-front-v14.html`).
+ */
+let scrimEl = null;
+function modal(titulo, sub, fill){
+  cerrarModal();
+  scrimEl = document.createElement('div');
+  scrimEl.className = 'scrim';
+  scrimEl.innerHTML = '<div class="modal"><div class="mh"><h3></h3><p></p></div><div class="mb"></div></div>';
+  scrimEl.querySelector('h3').textContent = titulo;
+  scrimEl.querySelector('p').textContent = sub;
+  fill(scrimEl.querySelector('.mb'));
+  scrimEl.onclick = e => { if(e.target === scrimEl) cerrarModal(); };
+  document.body.appendChild(scrimEl);
+}
+function cerrarModal(){ if(scrimEl){ scrimEl.remove(); scrimEl = null; } }
+document.addEventListener('keydown', e => { if(e.key === 'Escape') cerrarModal(); });
+
+/* ---------- mensaje de traspaso ---------- */
+function textoTraspaso(){
+  const L = LISTAS.find(x => x.id === listaActiva);
+  const st = estadoLista(L.id);
+  const p = progreso(L);
+  const fechaTxt = new Date(hoy + 'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit'});
+  let s = '*' + L.nombre.toUpperCase() + '* · ' + fechaTxt + '\n';
+  s += L.horario + ' · ' + (yo ? nombreDe(yo) : 'sin firmar') + '\n';
+  s += '───────────────\n';
+  s += 'Hecho: ' + p.hechas + ' de ' + p.total + '\n';
+
+  const faltan = [];
+  (L.bloques||[]).forEach(b => b.items.forEach(it => {
+    if(it.tipo === 'campo'){ if(!st.campos[it.id]) faltan.push(it.lab); }
+    else if(!st.items[it.id]) faltan.push(it.txt + (it.crit ? ' ⚠' : ''));
+  }));
+  if(faltan.length){
+    s += '\n*PENDIENTE:*\n';
+    faltan.forEach(f => s += '· ' + f + '\n');
+  } else {
+    s += '\nSin pendientes ✓\n';
+  }
+
+  const datos = [];
+  (L.bloques||[]).forEach(b => b.items.forEach(it => {
+    if(it.tipo === 'campo' && st.campos[it.id]) datos.push(it.lab + ': ' + st.campos[it.id] + (it.ph ? ' ' + it.ph : ''));
+  }));
+  if(datos.length){ s += '\n*DATOS:*\n'; datos.forEach(d => s += '· ' + d + '\n'); }
+
+  if(st.nota && st.nota.trim()){ s += '\n*NOVEDADES:*\n' + st.nota.trim() + '\n'; }
+  if(st.cierre){
+    s += '\n' + (st.cierre.estado === 'ok' ? '✅ Turno cerrado, todo hecho' : '⚠ Turno cerrado CON PENDIENTES');
+    s += '\n' + st.cierre.by + ' · ' + st.cierre.at + '\n';
+  } else {
+    s += '\n⚠ Turno todavía sin cerrar\n';
+  }
+  return s;
+}
+
 document.getElementById('btnWA').onclick = () => {
   const txt = textoTraspaso();
   modal('Mensaje de traspaso', 'Copialo y pegalo en el grupo. Lo manda el que entra, no el que se va.', m => {
@@ -1365,8 +1511,7 @@ document.getElementById('btnQuien').onclick = () => { if(yo) salir(); else abrir
    siguiente. */
 (function(){
   if(yo){ listaActiva = yo.puesto; return; }
-  const h = new Date(new Date().toLocaleString('en-US',{timeZone:'America/Argentina/Cordoba'})).getHours();
-  listaActiva = (h >= 7 && h < 16) ? 'enc_m' : 'enc_t';
+  listaActiva = primeraDelArea();
 })();
 
 pintarQuien();
