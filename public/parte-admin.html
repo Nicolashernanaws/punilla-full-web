@@ -67,6 +67,16 @@
 </header>
 
 <main>
+  <!-- El PIN se pide acá adentro y no con window.prompt: el cuadro gris del
+       navegador en el teléfono no deja ver de qué se trata, no se puede estilar
+       y no abre el teclado numérico. -->
+  <form id="login" hidden style="max-width:20rem;margin:3rem auto;display:grid;gap:.6rem">
+    <label for="pin" style="font-weight:600">PIN del tablero</label>
+    <input type="password" id="pin" inputmode="numeric" autocomplete="off"
+           pattern="[0-9]*" placeholder="6 dígitos">
+    <button type="submit">Entrar</button>
+  </form>
+
   <div class="grid" id="puestos"></div>
 
   <h2>Línea de tiempo del día</h2>
@@ -109,10 +119,8 @@ async function pedir(url) {
   return r.json();
 }
 
-/** Pide el PIN y, si entra, vuelve a intentar lo que se estaba haciendo. */
-async function entrar() {
-  const pin = window.prompt('PIN del tablero');
-  if (!pin) return false;
+/** Manda el PIN. Devuelve true si entro. */
+async function mandarPin(pin) {
   const r = await fetch('/parte/admin/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -124,6 +132,31 @@ async function entrar() {
   if (!r.ok) { $('#estado').textContent = 'PIN incorrecto.'; return false; }
   $('#estado').textContent = '';
   return true;
+}
+
+/**
+ * Muestra el cuadro del PIN y espera. Se resuelve cuando entra; si el PIN está
+ * mal, el cuadro queda ahí y se puede probar de nuevo sin recargar.
+ */
+function entrar() {
+  return new Promise((listo) => {
+    const form = $('#login');
+    form.hidden = false;
+    $('#pin').focus();
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      const pin = $('#pin').value.trim();
+      if (!/^\d{4,10}$/.test(pin)) { $('#estado').textContent = 'El PIN son números.'; return; }
+      if (await mandarPin(pin)) {
+        $('#pin').value = '';
+        form.hidden = true;
+        listo(true);
+      } else {
+        $('#pin').value = '';
+        $('#pin').focus();
+      }
+    };
+  });
 }
 
 function sello(cierre) {
