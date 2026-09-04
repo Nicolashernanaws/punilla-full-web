@@ -229,3 +229,46 @@ test('el pedido de PIN del arranque espera la respuesta del servidor', () => {
   // cerraba solo en la cara de la persona.
   assert.match(html, /setTimeout\(\(\) => \{ if\(!yo\) abrirQuien\(\); \}, 1200\)/);
 });
+
+// ── Lo mismo para el tablero ────────────────────────────────────────────────
+//
+// El tablero es otro archivo de una sola pieza y le corre el mismo riesgo: una
+// funcion que se llama y no existe no la ve ningun test de regex, y la pagina
+// se abre igual, con las tarjetas vacias y sin un error a la vista.
+
+const admin = fs.readFileSync(path.join(__dirname, '..', 'public', 'parte-admin.html'), 'utf8');
+
+test('🔴 el tablero no llama a ninguna funcion que no exista', () => {
+  const js = admin
+    .slice(admin.indexOf('<script>'), admin.lastIndexOf('</script>'))
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*\/\/.*$/gm, ' ');
+
+  const definidas = new Set(
+    [...js.matchAll(/(?:function|const|let|var|class)\s+([A-Za-z_$][\w$]*)/g)].map((m) => m[1]),
+  );
+  for (const m of js.matchAll(/([A-Za-z_$][\w$]*)\s*(?:=>|=\s*(?:async\s*)?function)/g)) definidas.add(m[1]);
+  for (const m of js.matchAll(/function\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) {
+    for (const a of m[1].split(',')) {
+      const nom = a.trim().split(/[\s=]/)[0];
+      if (nom) definidas.add(nom);
+    }
+  }
+
+  const NATIVAS = new Set([
+    'if', 'for', 'while', 'switch', 'catch', 'do', 'else', 'return', 'typeof',
+    'function', 'new', 'await', 'of', 'in', 'delete', 'void', 'yield', 'throw',
+    'parseInt', 'parseFloat', 'isNaN', 'isFinite', 'fetch', 'setTimeout',
+    'setInterval', 'clearTimeout', 'clearInterval', 'requestAnimationFrame',
+    'encodeURIComponent', 'decodeURIComponent', 'atob', 'btoa', 'structuredClone',
+    'alert', 'confirm', 'prompt', 'eval', 'require', 'async', 'super',
+    // `var(--x)` de CSS adentro de un template literal, no una llamada.
+    'var',
+  ]);
+
+  const huerfanas = [...new Set(
+    [...js.matchAll(/(?:^|[^.\w$'"`])([a-z][A-Za-z0-9_$]*)\s*\(/gm)].map((m) => m[1]),
+  )].filter((n) => !definidas.has(n) && !NATIVAS.has(n)).sort();
+
+  assert.deepEqual(huerfanas, [], 'se llaman pero no existen: ' + huerfanas.join(', '));
+});

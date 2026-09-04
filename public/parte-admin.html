@@ -61,8 +61,8 @@
 <header>
   <h1>Parte Diario · Tablero</h1>
   <input type="date" id="fecha">
-  <input type="password" id="key" placeholder="ADMIN_KEY" style="width:11rem">
   <button id="ver">Ver</button>
+  <button id="salir" hidden>Salir</button>
   <span class="aviso" id="estado"></span>
 </header>
 
@@ -89,15 +89,41 @@ const NOMBRES = {
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 
-// La clave queda sólo en esta pestaña: no en localStorage, para que no sobreviva
-// a que alguien se lleve la compu.
-const key = () => $('#key').value.trim();
+/*
+ * La sesión va en una cookie firmada con Path=/parte/admin, no en una clave que
+ * haya que tipear. Nico, 4/9: "sacale la key, es un embole, quiero entrar y ver
+ * mas rapido".
+ *
+ * 🔴 LA CLAVE NO SE SACO, SE DEJO DE TIPEAR. El tablero muestra los nombres de
+ * todos, la línea de tiempo entera y los campos de plata de la caja, en una URL
+ * que se adivina. Lo que cambia es que ahora se entra una vez con un PIN y la
+ * sesión se renueva sola en cada consulta: mientras lo abra seguido, no se lo
+ * vuelve a pedir. El PIN no queda guardado en ningún lado del navegador.
+ */
+class SinSesion extends Error {}
 
 async function pedir(url) {
-  const r = await fetch(url, { headers: { 'x-admin-key': key() } });
-  if (r.status === 401) throw new Error('ADMIN_KEY incorrecta');
+  const r = await fetch(url, { credentials: 'same-origin' });
+  if (r.status === 401) throw new SinSesion('sin sesión');
   if (!r.ok) throw new Error('HTTP ' + r.status);
   return r.json();
+}
+
+/** Pide el PIN y, si entra, vuelve a intentar lo que se estaba haciendo. */
+async function entrar() {
+  const pin = window.prompt('PIN del tablero');
+  if (!pin) return false;
+  const r = await fetch('/parte/admin/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
+    body: JSON.stringify({ pin: String(pin).trim() }),
+  });
+  if (r.status === 429) { $('#estado').textContent = 'Demasiados intentos. Esperá 15 minutos.'; return false; }
+  if (r.status === 503) { $('#estado').textContent = 'Falta setear PARTE_ADMIN_PIN en Railway.'; return false; }
+  if (!r.ok) { $('#estado').textContent = 'PIN incorrecto.'; return false; }
+  $('#estado').textContent = '';
+  return true;
 }
 
 function sello(cierre) {
@@ -181,12 +207,30 @@ async function cargar() {
   }
 }
 
-$('#ver').addEventListener('click', cargar);
-$('#key').addEventListener('keydown', (e) => e.key === 'Enter' && cargar());
-// Arranca en la fecha operativa de hoy, que la pone el servidor.
-fetch('/parte/admin/api/dia', { headers: { 'x-admin-key': '' } })
-  .catch(() => {})
-  .finally(() => { $('#fecha').value = new Date().toISOString().slice(0, 10); });
+$('#ver').addEventListener('click', () => cargarOEntrar());
+$('#salir').addEventListener('click', async () => {
+  await fetch('/parte/admin/api/logout', { method: 'POST', credentials: 'same-origin' });
+  location.reload();
+});
+
+/*
+ * Esto es lo que lo hace rápido: se intenta cargar de una. Si la cookie sigue
+ * viva —el caso normal— el tablero aparece solo y no se pide nada. El PIN salta
+ * únicamente cuando la sesión venció.
+ */
+async function cargarOEntrar() {
+  try {
+    await cargar();
+    $('#salir').hidden = false;
+  } catch (e) {
+    if (!(e instanceof SinSesion)) { $('#estado').textContent = e.message; return; }
+    if (await entrar()) { await cargar(); $('#salir').hidden = false; }
+  }
+}
+
+$('#fecha').value = new Date().toISOString().slice(0, 10);
+$('#fecha').addEventListener('change', () => cargarOEntrar());
+cargarOEntrar();
 </script>
 </body>
 </html>

@@ -87,8 +87,14 @@ test('🔴 el evento se aplica con SELECT … FOR UPDATE (criterio 1)', () => {
 test('el traspaso es de la tarde y sólo lectura', () => {
   assert.deepEqual(TRASPASO, { enc_t: 'enc_m', fiam_t: 'fiam_m' });
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  // La ruta de traspaso no escribe nada.
-  const bloque = rutas.slice(rutas.indexOf("'/api/traspaso'"), rutas.indexOf("admin/api/dia"));
+  // La ruta de traspaso no escribe nada. El corte va hasta el ENCABEZADO de la
+  // seccion del tablero y no hasta `admin/api/dia`: entre medio hay ahora el
+  // login del tablero, que si escribe (anota los intentos fallidos), y tomarlo
+  // dentro del bloque haria fallar esto sin que la ruta del traspaso cambie.
+  const bloque = rutas.slice(
+    rutas.indexOf("'/api/traspaso'"),
+    rutas.indexOf('── Tablero del administrador'),
+  );
   assert.doesNotMatch(bloque, /INSERT|UPDATE|DELETE/);
 });
 
@@ -171,4 +177,56 @@ test('el tope por puesto es alto a propósito', () => {
   // afuera. Con 30 cada 15 min, agotar las 10.000 combinaciones lleva 80+ horas.
   assert.equal(FRENO_PUESTO_MAX, 30);
   assert.ok(FRENO_PUESTO_MAX > FRENO_MAX * 4);
+});
+
+// ── Entrar al tablero con un PIN, no con la ADMIN_KEY (4/9) ─────────────────
+//
+// Nico: "pero sacale la key ...es un embole quiero entrar y ver mas rapido".
+//
+// La clave NO se saca del todo: el tablero muestra los nombres de todos, la
+// linea de tiempo completa y los campos de plata de la caja, en una URL que se
+// adivina. Lo que se saca es tener que TIPEARLA cada vez.
+//
+// En su lugar: un PIN, la misma mecanica que ya usa la gente, con una sesion que
+// se renueva sola en cada request autorizado. Entra una vez y no se lo pide mas
+// mientras siga abriendo el tablero seguido.
+
+test('el tablero se puede abrir con la cookie, sin la ADMIN_KEY', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /function sesionAdmin\(req\)/);
+  // requiereAdmin acepta las dos: la cookie para la persona, la key para curl y
+  // los scripts, que es como se verifica esto sin un navegador.
+  assert.match(rutas, /function requiereAdmin[\s\S]{0,400}sesionAdmin\(req\)/);
+});
+
+test('🔴 la cookie del tablero no vale para /parte', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Con Path=/parte, la cookie del tablero viajaria a las pantallas de la gente.
+  assert.match(rutas, /Path=\/parte\/admin/);
+  assert.match(rutas, /COOKIE_ADMIN = 'parte_admin'/);
+});
+
+test('🔴 el PIN del tablero tiene el mismo freno que el de la gente', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // El freno en memoria no sirve: Railway corre mas de una replica. Se cuenta en
+  // la base, igual que el login de los puestos.
+  assert.match(rutas, /admin\/api\/login[\s\S]{0,700}frenadoEnBase\(PUESTO_ADMIN, ipCliente\(req\)\)/);
+  assert.match(rutas, /admin\/api\/login[\s\S]{0,1400}login_fallido/);
+  // Y se compara en tiempo constante, como el PIN de los puestos.
+  assert.match(rutas, /timingSafeEqual/);
+});
+
+test('sin PARTE_ADMIN_PIN seteado, la ADMIN_KEY sigue sirviendo', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Para no quedarse afuera del tablero por una variable que falta.
+  assert.match(rutas, /process\.env\.PARTE_ADMIN_PIN/);
+  assert.match(rutas, /pin_no_configurado/);
+});
+
+test('el front del tablero pide un PIN, no la ADMIN_KEY', () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'public', 'parte-admin.html'), 'utf8');
+  assert.equal(html.includes('ADMIN_KEY'), false, 'todavia dice ADMIN_KEY');
+  assert.match(html, /\/parte\/admin\/api\/login/);
+  // Y si la sesion sigue viva, entra solo: eso es lo que lo hace rapido.
+  assert.match(html, /credentials: 'same-origin'/);
 });
