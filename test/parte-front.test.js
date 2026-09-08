@@ -294,3 +294,52 @@ test('🔴 hidden le gana al estilo en el tablero', () => {
   assert.match(admin, /\[hidden\]\{display:none !important\}/);
   assert.doesNotMatch(admin, /<form id="login" hidden style=/);
 });
+
+// ── Los nombres de los campos, en un solo lugar (8/9) ───────────────────────
+//
+// El tablero mostraba los ids crudos: `bj_fia 14`, `m_bj_out 6,12,1`. Nico:
+// "de los fiambreros a mi ver no entiendo qué se puso". Los nombres estaban en
+// la pantalla de ellas y el tablero no los conocía.
+//
+// 🔴 `public/parte-campos.js` NO lo carga `parte.html`, a propósito: esa
+// pantalla la usan cinco personas todos los días y ya se rompió una vez. Este
+// test es lo que reemplaza a la dependencia: si una etiqueta cambia de un lado
+// y no del otro, falla acá y no en el teléfono de Abril.
+
+test('🔴 el catálogo del tablero dice lo mismo que la pantalla de ellas', () => {
+  const campos = fs.readFileSync(path.join(__dirname, '..', 'public', 'parte-campos.js'), 'utf8');
+  const global = {};
+  new Function('window', campos).call(global, global);
+  const catalogo = global.PARTE_CAMPOS;
+
+  // Cada `F('id','Etiqueta','sub','unidad')` de parte.html.
+  const enPantalla = [...html.matchAll(/F\('([^']+)','([^']*)','([^']*)','([^']*)'\)/g)]
+    .map((m) => ({ id: m[1], lab: m[2], unidad: m[4] }));
+
+  assert.ok(enPantalla.length >= 20, 'no se encontraron los campos en parte.html');
+
+  const faltan = enPantalla.filter((c) => !catalogo[c.id]).map((c) => c.id);
+  assert.deepEqual(faltan, [], 'están en la pantalla y no en el catálogo: ' + faltan.join(', '));
+
+  const distintos = enPantalla
+    .filter((c) => catalogo[c.id].lab !== c.lab || catalogo[c.id].unidad !== c.unidad)
+    .map((c) => `${c.id}: pantalla "${c.lab}" (${c.unidad}) vs catálogo "${catalogo[c.id].lab}" (${catalogo[c.id].unidad})`);
+  assert.deepEqual(distintos, [], distintos.join(' · '));
+
+  // Y al revés: un id en el catálogo que ya no existe es basura que confunde.
+  const ids = new Set(enPantalla.map((c) => c.id));
+  const sobran = Object.keys(catalogo).filter((id) => !ids.has(id));
+  assert.deepEqual(sobran, [], 'están en el catálogo y ya no en la pantalla: ' + sobran.join(', '));
+});
+
+test('los pares apuntan a campos que existen', () => {
+  const campos = fs.readFileSync(path.join(__dirname, '..', 'public', 'parte-campos.js'), 'utf8');
+  const global = {};
+  new Function('window', campos).call(global, global);
+  for (const par of global.PARTE_PARES) {
+    assert.ok(global.PARTE_CAMPOS[par.salidaEn], `${par.salidaEn} no está en el catálogo`);
+    for (const f of par.filas) {
+      if (f.abrio) assert.ok(global.PARTE_CAMPOS[f.abrio], `${f.abrio} no está en el catálogo`);
+    }
+  }
+});

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parte Diario · Tablero</title>
+<script src="/parte-campos.js"></script>
 <style>
   /* Lo que pidió Nico: VER LOS MOVIMIENTOS GUARDADOS. El tablero no es un
      resumen bonito — el dato que importa es la línea de tiempo, porque ahí se
@@ -37,9 +38,27 @@
   .sello.no  { background: color-mix(in srgb, var(--mal) 22%, transparent); color: var(--mal); }
   details { margin-top: .6rem; }
   summary { cursor: pointer; color: var(--suave); font-size: .85rem; }
-  .campos { display: grid; gap: .2rem; margin: .5rem 0 0; font-size: .88rem; }
-  .campos div { display: flex; justify-content: space-between; gap: .5rem; }
+  .campos { display: grid; gap: .28rem; margin: .5rem 0 0; font-size: .88rem; }
+  .campos > div { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; }
   .campos b { font-variant-numeric: tabular-nums; }
+  /* La unidad va pegada al número y calla: el número es el dato. */
+  .u { color: var(--suave); font-weight: 400; font-size: .82em; margin-left: .15em; }
+  /* Un id que no está en el catálogo se muestra COMO ID, marcado. Esconderlo
+     seria peor: alguien agrego un campo y nadie lo va a notar nunca. */
+  .crudo { color: var(--amb); font-family: ui-monospace, monospace; font-size: .9em; }
+
+  /* Lo que abrio y lo que salio, al lado. Es el movimiento del turno, y era lo
+     unico que el tablero perdia del todo. */
+  .mov { margin: .6rem 0 .1rem; }
+  .mov table { width: 100%; border-collapse: collapse; font-size: .88rem; }
+  .mov th { font-weight: 600; color: var(--suave); font-size: .78rem;
+            text-align: right; padding: 0 0 .15rem; }
+  .mov th:first-child { text-align: left; font-weight: 500; }
+  .mov td { padding: .12rem 0; font-variant-numeric: tabular-nums; }
+  .mov td:not(:first-child) { text-align: right; width: 3.6rem; }
+  .mov td:first-child { color: var(--suave); }
+  .mov .baja { color: var(--txt); }
+  .mov .falta { color: var(--suave); }
   .nota { margin-top: .5rem; font-size: .88rem; color: var(--suave); font-style: italic; }
   h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; }
   .linea { border-left: 2px solid var(--borde); margin-left: .5rem; padding-left: .9rem; }
@@ -173,17 +192,78 @@ function sello(cierre) {
   return '<span class="sello pend">cerró con pendientes</span>';
 }
 
+/** El nombre de un campo, o el id marcado si nadie lo cargó al catálogo. */
+function nombreCampo(id) {
+  const c = window.PARTE_CAMPOS && window.PARTE_CAMPOS[id];
+  return c ? esc(c.lab) : `<span class="crudo">${esc(id)}</span>`;
+}
+
+function unidad(id) {
+  const c = window.PARTE_CAMPOS && window.PARTE_CAMPOS[id];
+  return c && c.unidad ? `<span class="u">${esc(c.unidad)}</span>` : '';
+}
+
+/**
+ * Lo que abrió y lo que salió, uno al lado del otro.
+ *
+ * 🔴 ERA LO ÚNICO QUE EL TABLERO PERDÍA DEL TODO. La fiambrería abre con 14
+ * bandejas de fiambre y cierra con 12; eso estaba en dos campos distintos, sin
+ * nombre, y nadie podía leer el turno. `m_bj_out` guarda los tres números en un
+ * solo campo separados por coma, en el orden de su etiqueta: picada, fiambre,
+ * pizza.
+ */
+function bloqueMovimiento(par, campos) {
+  const salida = campos[par.salidaEn];
+  if (salida == null || salida === '') return '';
+  const partes = String(salida).split(/[,/\s]+/).filter((x) => x !== '');
+  const hayApertura = par.filas.some((f) => f.abrio && campos[f.abrio] != null);
+
+  const filas = par.filas.map((f, i) => {
+    const abrio = f.abrio ? campos[f.abrio] : undefined;
+    const salio = partes[i];
+    return `<tr>
+      <td>${esc(f.nombre)}</td>
+      ${hayApertura ? `<td>${abrio == null || abrio === '' ? '<span class="falta">—</span>' : esc(abrio)}</td>` : ''}
+      <td class="baja">${salio == null ? '<span class="falta">—</span>' : esc(salio)}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="mov"><table>
+    <thead><tr><th>${esc(par.titulo)}</th>${hayApertura ? '<th>abrió</th>' : ''}<th>salió</th></tr></thead>
+    <tbody>${filas}</tbody>
+  </table></div>`;
+}
+
 function tarjeta(p) {
-  const campos = Object.entries(p.campos || {});
+  const todos = p.campos || {};
+  const pares = (window.PARTE_PARES || [])
+    .map((par) => bloqueMovimiento(par, todos))
+    .filter(Boolean)
+    .join('');
+  // Los que ya se ven en el bloque de movimiento no se repiten abajo.
+  const yaMostrados = pares ? (window.PARTE_EN_PARES || new Set()) : new Set();
+  // 🔴 EN EL ORDEN DEL CIERRE, no en el que el JSON haya serializado. Salían
+  // "Diferencia" primero y "Corte por sistema" último, al revés de como se
+  // completan, y eso solo ya hace que no se entienda lo que se está mirando.
+  const orden = Object.keys(window.PARTE_CAMPOS || {});
+  const campos = Object.entries(todos)
+    .filter(([k]) => !yaMostrados.has(k))
+    .sort((a, b) => {
+      const ia = orden.indexOf(a[0]), ib = orden.indexOf(b[0]);
+      // Un campo que no está en el catálogo va al final: es lo que hay que mirar.
+      return (ia < 0 ? 1e9 : ia) - (ib < 0 ? 1e9 : ib);
+    });
   return `<div class="card">
     <h3>${NOMBRES[p.puesto] || p.puesto}</h3>
     <div class="quien">${p.cierre ? esc(p.cierre.by) + ' · ' + esc(p.cierre.at) : 'todavía nadie cerró'}</div>
     <div class="prog">${p.hechas}<span class="quien"> tildadas</span></div>
     ${sello(p.cierre)}
     ${p.cierre && p.cierre.detalle ? `<div class="nota">Pendiente: ${esc(p.cierre.detalle)}</div>` : ''}
-    ${campos.length ? `<details open><summary>${campos.length} campos cargados</summary>
-      <div class="campos">${campos.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-    </details>` : '<div class="quien" style="margin-top:.5rem">sin campos cargados</div>'}
+    ${pares}
+    ${campos.length ? `<div class="campos">${campos
+      .map(([k, v]) => `<div><span>${nombreCampo(k)}</span><b>${esc(v)}${unidad(k)}</b></div>`)
+      .join('')}</div>`
+      : (pares ? '' : '<div class="quien" style="margin-top:.5rem">sin campos cargados</div>')}
     ${p.nota ? `<div class="nota">“${esc(p.nota)}”</div>` : ''}
   </div>`;
 }
