@@ -237,13 +237,18 @@ function sello(cierre) {
 }
 
 /** El nombre de un campo, o el id marcado si nadie lo cargó al catálogo. */
+function defDeCampo(id) {
+  return (window.PARTE_CAMPOS && window.PARTE_CAMPOS[id])
+    || (window.PARTE_CAMPOS_VIEJOS && window.PARTE_CAMPOS_VIEJOS[id]);
+}
+
 function nombreCampo(id) {
-  const c = window.PARTE_CAMPOS && window.PARTE_CAMPOS[id];
+  const c = defDeCampo(id);
   return c ? esc(c.lab) : `<span class="crudo">${esc(id)}</span>`;
 }
 
 function unidad(id) {
-  const c = window.PARTE_CAMPOS && window.PARTE_CAMPOS[id];
+  const c = defDeCampo(id);
   return c && c.unidad ? `<span class="u">${esc(c.unidad)}</span>` : '';
 }
 
@@ -257,14 +262,19 @@ function unidad(id) {
  * pizza.
  */
 function bloqueMovimiento(par, campos) {
-  const salida = campos[par.salidaEn];
-  if (salida == null || salida === '') return '';
-  const partes = String(salida).split(/[,/\s]+/).filter((x) => x !== '');
+  // Desde el 8/9 cada conteo tiene su casilla; antes iban los tres juntos.
+  const propios = par.filas.map((f) => campos[f.salio]);
+  const hayPropios = propios.some((v) => v != null && v !== '');
+  const viejo = campos[par.legacy];
+  if (!hayPropios && (viejo == null || viejo === '')) return '';
+  const partes = hayPropios
+    ? propios
+    : String(viejo).split(/[^0-9]+/).filter((x) => x !== '');
   const hayApertura = par.filas.some((f) => f.abrio && campos[f.abrio] != null);
 
   const filas = par.filas.map((f, i) => {
     const abrio = f.abrio ? campos[f.abrio] : undefined;
-    const salio = partes[i];
+    const salio = partes.length === 3 ? partes[i] : undefined;
     return `<tr>
       <td>${esc(f.nombre)}</td>
       ${hayApertura ? `<td>${abrio == null || abrio === '' ? '<span class="falta">—</span>' : esc(abrio)}</td>` : ''}
@@ -348,14 +358,22 @@ function panelBandejas(dias) {
     const filas = fechas.map((f) => {
       const m = porDia.get(f).fiam_m || {};
       const t = porDia.get(f).fiam_t || {};
-      const cerroM = tresNumeros(m.m_bj_out);
-      const cerroT = tresNumeros(t.t_bj_out);
+      // Desde el 8/9 cada conteo tiene su propia casilla. Antes iban los tres
+      // en una sola: esos días se siguen leyendo, y cuando no se pueden repartir
+      // se dicen "sin leer" en vez de inventar el reparto.
+      const salida = (campos, propio, viejo) => {
+        const n = num(campos[propio]);
+        if (n != null) return n;
+        const tres = tresNumeros(campos[viejo]);
+        if (tres) return tres[i];
+        return campos[viejo] ? 'sin leer' : null;
+      };
       return {
         fecha: f,
         m_ab: num(m[cat.abrio]),
-        m_ci: cerroM ? cerroM[i] : (m.m_bj_out ? 'sin leer' : null),
+        m_ci: salida(m, cat.mOut, 'm_bj_out'),
         t_ab: num(t[cat.abrio]),
-        t_ci: cerroT ? cerroT[i] : (t.t_bj_out ? 'sin leer' : null),
+        t_ci: salida(t, cat.tOut, 't_bj_out'),
       };
     }).filter((r) => [r.m_ab, r.m_ci, r.t_ab, r.t_ci].some((x) => x != null));
 

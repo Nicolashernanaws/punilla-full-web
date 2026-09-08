@@ -24,9 +24,13 @@
     hormas: { lab: 'Hormas abiertas', unidad: 'u' },
     // Fiambrería, al salir
     m_merma: { lab: 'Merma del turno', unidad: 'kg' },
-    m_bj_out: { lab: 'Bandejas al salir (pic/fia/piz)', unidad: 'u' },
+    m_out_pic: { lab: 'Bandejas de picada al salir', unidad: 'u' },
+    m_out_fia: { lab: 'Bandejas de fiambre al salir', unidad: 'u' },
+    m_out_piz: { lab: 'Bandejas de pizza al salir', unidad: 'u' },
     t_merma: { lab: 'Merma del turno', unidad: 'kg' },
-    t_bj_out: { lab: 'Bandejas al salir (pic/fia/piz)', unidad: 'u' },
+    t_out_pic: { lab: 'Bandejas de picada al salir', unidad: 'u' },
+    t_out_fia: { lab: 'Bandejas de fiambre al salir', unidad: 'u' },
+    t_out_piz: { lab: 'Bandejas de pizza al salir', unidad: 'u' },
     // Encargado
     caja_ap: { lab: 'Fondo de caja verificado', unidad: '$' },
     c_sistema: { lab: 'Corte por sistema', unidad: '$' },
@@ -46,6 +50,20 @@
   };
 
   /**
+   * Campos que YA NO se piden, pero que están en los partes viejos.
+   *
+   * 🔴 NO SE BORRAN. Hasta el 8/9 los tres conteos de salida iban en una sola
+   * casilla, y esos días son datos reales de gente que trabajó: si el catálogo
+   * los olvida, el tablero muestra `m_bj_out` en crudo y el histórico se vuelve
+   * ilegible. Van acá y no en CAMPOS porque el test de sincronía compara CAMPOS
+   * contra la pantalla, y éstos ya no están en la pantalla.
+   */
+  const CAMPOS_VIEJOS = {
+    m_bj_out: { lab: 'Bandejas al salir (pic/fia/piz)', unidad: 'u', hasta: '2026-09-07' },
+    t_bj_out: { lab: 'Bandejas al salir (pic/fia/piz)', unidad: 'u', hasta: '2026-09-07' },
+  };
+
+  /**
    * Los campos que cuentan LO MISMO al principio y al final del turno.
    *
    * Ésta es la información que el tablero perdía del todo: la fiambrería abre
@@ -58,27 +76,34 @@
   const PARES = [
     {
       titulo: 'Bandejas',
-      salidaEn: 'm_bj_out',
+      // El campo viejo, de cuando los tres numeros iban en una sola casilla.
+      // Sigue leyendose para los dias anteriores al 8/9: son datos reales y no
+      // se tiran porque haya cambiado el formulario.
+      legacy: 'm_bj_out',
       filas: [
-        { nombre: 'Picada', abrio: 'bj_pic' },
-        { nombre: 'Fiambre', abrio: 'bj_fia' },
-        { nombre: 'Pizza', abrio: 'bj_piz' },
+        { nombre: 'Picada', abrio: 'bj_pic', salio: 'm_out_pic' },
+        { nombre: 'Fiambre', abrio: 'bj_fia', salio: 'm_out_fia' },
+        { nombre: 'Pizza', abrio: 'bj_piz', salio: 'm_out_piz' },
       ],
     },
     {
       titulo: 'Bandejas',
-      salidaEn: 't_bj_out',
+      legacy: 't_bj_out',
       filas: [
-        { nombre: 'Picada', abrio: null },
-        { nombre: 'Fiambre', abrio: null },
-        { nombre: 'Pizza', abrio: null },
+        { nombre: 'Picada', abrio: 'bj_pic', salio: 't_out_pic' },
+        { nombre: 'Fiambre', abrio: 'bj_fia', salio: 't_out_fia' },
+        { nombre: 'Pizza', abrio: 'bj_piz', salio: 't_out_piz' },
       ],
     },
   ];
 
   /** Los ids que ya muestra un bloque de pares y no hay que repetir en la lista. */
   const enPares = new Set(
-    PARES.flatMap((p) => [p.salidaEn, ...p.filas.map((f) => f.abrio)]).filter(Boolean),
+    PARES.flatMap((p) => [
+      p.legacy,
+      ...p.filas.map((f) => f.abrio),
+      ...p.filas.map((f) => f.salio),
+    ]).filter(Boolean),
   );
 
   /**
@@ -86,12 +111,13 @@
    * escriben en el campo de salida: picada, fiambre, pizza.
    */
   const BANDEJAS = [
-    { nombre: 'Picada', abrio: 'bj_pic' },
-    { nombre: 'Fiambre', abrio: 'bj_fia' },
-    { nombre: 'Pizza', abrio: 'bj_piz' },
+    { nombre: 'Picada', abrio: 'bj_pic', mOut: 'm_out_pic', tOut: 't_out_pic' },
+    { nombre: 'Fiambre', abrio: 'bj_fia', mOut: 'm_out_fia', tOut: 't_out_fia' },
+    { nombre: 'Pizza', abrio: 'bj_piz', mOut: 'm_out_piz', tOut: 't_out_piz' },
   ];
 
   global.PARTE_BANDEJAS = BANDEJAS;
+  global.PARTE_CAMPOS_VIEJOS = CAMPOS_VIEJOS;
   global.PARTE_CAMPOS = CAMPOS;
   global.PARTE_PARES = PARES;
   global.PARTE_EN_PARES = enPares;

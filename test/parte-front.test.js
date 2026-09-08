@@ -336,10 +336,14 @@ test('los pares apuntan a campos que existen', () => {
   const campos = fs.readFileSync(path.join(__dirname, '..', 'public', 'parte-campos.js'), 'utf8');
   const global = {};
   new Function('window', campos).call(global, global);
+  const conocido = (id) => global.PARTE_CAMPOS[id] || global.PARTE_CAMPOS_VIEJOS[id];
   for (const par of global.PARTE_PARES) {
-    assert.ok(global.PARTE_CAMPOS[par.salidaEn], `${par.salidaEn} no está en el catálogo`);
+    // El campo viejo tiene que seguir siendo legible: los partes anteriores al
+    // 8/9 lo usan y son datos de gente que trabajó.
+    assert.ok(conocido(par.legacy), `${par.legacy} no está en ningún catálogo`);
     for (const f of par.filas) {
-      if (f.abrio) assert.ok(global.PARTE_CAMPOS[f.abrio], `${f.abrio} no está en el catálogo`);
+      if (f.abrio) assert.ok(conocido(f.abrio), `${f.abrio} no está en el catálogo`);
+      if (f.salio) assert.ok(conocido(f.salio), `${f.salio} no está en el catálogo`);
     }
   }
 });

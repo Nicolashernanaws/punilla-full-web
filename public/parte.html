@@ -514,7 +514,9 @@ const FIAM_BLOQUES = [
       T('g3','15:50','Contar bandejas y hormas otra vez y anotarlo abajo','Sin el conteo de salida no hay forma de saber cuánto se vendió.',true),
       T('g4','15:55','Pasarle al encargado la merma del turno y lo que falta pedir','',true),
       F('m_merma','Merma del turno','','kg'),
-      F('m_bj_out','Bandejas al salir (pic/fia/piz)','','u'),
+      F('m_out_pic','Bandejas de picada al salir','','u'),
+      F('m_out_fia','Bandejas de fiambre al salir','','u'),
+      F('m_out_piz','Bandejas de pizza al salir','','u'),
     ]},
     {t:'t', n:'Antes de irse · 22:30 a 00:00', items:[
       T('h1','22:30','Empezar a guardar lo que ya no sale: a cámara, filmado y con fecha','Nada queda fuera de frío. Ni una bandeja, ni "un ratito".',true),
@@ -523,7 +525,9 @@ const FIAM_BLOQUES = [
       T('h4','23:40','Mostrador vacío, seco y desinfectado. Piso del sector'),
       T('h5','23:55','Contar bandejas y hormas, anotarlo y mostrarle el sector al encargado','No te vas sin el OK.',true),
       F('t_merma','Merma del turno','','kg'),
-      F('t_bj_out','Bandejas al salir (pic/fia/piz)','','u'),
+      F('t_out_pic','Bandejas de picada al salir','','u'),
+      F('t_out_fia','Bandejas de fiambre al salir','','u'),
+      F('t_out_piz','Bandejas de pizza al salir','','u'),
     ]},
   ];
 const FIAM = t => ({
