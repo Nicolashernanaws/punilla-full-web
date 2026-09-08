@@ -87,6 +87,9 @@
   .btab .dia { color: var(--suave); white-space: nowrap; }
   .btab .n { font-variant-numeric: tabular-nums; display: block; }
   .btab .sin { color: var(--suave); }
+  /* Lo que salió es la respuesta; los cuatro conteos son cómo se llegó a ella. */
+  .btab .fuerte { font-weight: 700; }
+  .btab td:last-child { padding-left: .5rem; border-left: 1px solid var(--borde); }
   /* La barra: fina, extremos redondeados, anclada al mismo cero en toda la
      columna. Es magnitud, no identidad: un solo tono para todas. */
   /* `display:block` no es decorativo: es un <span>, y sin esto el alto no le
@@ -153,8 +156,10 @@
 
   <h2>Bandejas del mostrador</h2>
   <p class="quien" style="margin:.2rem 0 .8rem">
-    Lo que había en el mostrador en los cuatro momentos del día. Lo que cierra un turno
-    tiene que ser lo que cuenta el siguiente al entrar: cuando no coincide, se marca.
+    <b>Salieron</b> = lo que había + lo que se armó − lo que quedó. Es lo que se fue del
+    mostrador: vendido <em>o tirado</em>, porque la merma se anota en kilos y no en bandejas.
+    Y lo que cierra un turno tiene que ser lo que cuenta el siguiente al entrar: cuando no
+    coincide, se marca.
   </p>
   <div class="bandejas" id="bandejas"></div>
 
@@ -368,29 +373,57 @@ function panelBandejas(dias) {
         if (tres) return tres[i];
         return campos[viejo] ? 'sin leer' : null;
       };
-      return {
-        fecha: f,
-        m_ab: num(m[cat.abrio]),
-        m_ci: salida(m, cat.mOut, 'm_bj_out'),
-        t_ab: num(t[cat.abrio]),
-        t_ci: salida(t, cat.tOut, 't_bj_out'),
-      };
+      const m_ab = num(m[cat.abrio]);
+      const m_ci = salida(m, cat.mOut, 'm_bj_out');
+      const t_ab = num(t[cat.abrio]);
+      const t_ci = salida(t, cat.tOut, 't_bj_out');
+
+      /*
+       * 🔴 LO QUE SALIÓ DEL MOSTRADOR: abrió + armó − cerró.
+       *
+       * Y NO SE LLAMA "VENDIDAS", a propósito. Una bandeja que se tiró también
+       * salió, y la merma se anota en KILOS, no en bandejas: no hay forma de
+       * separar una cosa de la otra con lo que se cuenta hoy. Ponerle "vendidas"
+       * sería un número con la cara de una venta que incluye lo que se perdió.
+       *
+       * Necesita las tres: sin "armó" la cuenta tiene dos medidas y tres
+       * incógnitas y no se despeja. Los días anteriores al 8/9 no la tienen, y
+       * por eso muestran "—" en esta columna en vez de un número inventado.
+       */
+      const salieron = (ab, arm, ci) =>
+        typeof ab === 'number' && typeof arm === 'number' && typeof ci === 'number'
+          ? ab + arm - ci
+          : null;
+
+      const sal_m = salieron(m_ab, num(m[cat.mArm]), m_ci);
+      const sal_t = salieron(t_ab, num(t[cat.tArm]), t_ci);
+      const sal = sal_m == null && sal_t == null ? null : (sal_m || 0) + (sal_t || 0);
+
+      return { fecha: f, m_ab, m_ci, t_ab, t_ci, sal, sal_m, sal_t };
     }).filter((r) => [r.m_ab, r.m_ci, r.t_ab, r.t_ci].some((x) => x != null));
 
     if (!filas.length) return '';
 
-    // Todas las barras del bloque contra el mismo cero y el mismo máximo, o
-    // comparar dos columnas seria mentira.
-    const tope = Math.max(1, ...filas.flatMap((r) =>
-      [r.m_ab, r.m_ci, r.t_ab, r.t_ci].filter((x) => typeof x === 'number')));
+    // La barra va SÓLO en la columna que importa —lo que salió—: cuatro
+    // columnas con barra era ruido, y la magnitud que se compara es una sola.
+    const tope = Math.max(1, ...filas.map((r) => r.sal).filter((x) => typeof x === 'number'));
 
     const celda = (v) => {
       if (v == null) return '<td><span class="n sin">—</span></td>';
       if (typeof v !== 'number') return `<td><span class="n sin">${esc(v)}</span></td>`;
-      return `<td><span class="n">${v}</span>
-        <span class="barra"><i style="width:${Math.round((v / tope) * 100)}%"></i></span></td>`;
+      return `<td><span class="n">${v}</span></td>`;
     };
 
+    const celdaSal = (r) => {
+      if (r.sal == null) return '<td><span class="n sin">—</span></td>';
+      const det = [r.sal_m == null ? null : 'mañana ' + r.sal_m,
+                   r.sal_t == null ? null : 'tarde ' + r.sal_t].filter(Boolean).join(' · ');
+      return `<td title="${esc(det)}"><span class="n fuerte">${r.sal}</span>
+        <span class="barra"><i style="width:${Math.round((r.sal / tope) * 100)}%"></i></span></td>`;
+    };
+
+    const conSal = filas.filter((r) => typeof r.sal === 'number');
+    const totalSal = conSal.reduce((a, r) => a + r.sal, 0);
     const ultimo = filas[0];
     const nivel = [ultimo.t_ci, ultimo.t_ab, ultimo.m_ci, ultimo.m_ab]
       .find((x) => typeof x === 'number');
@@ -398,25 +431,27 @@ function panelBandejas(dias) {
     const cuerpo = filas.map((r) => {
       // El traspaso: lo que dejó la mañana contra lo que contó la tarde.
       const traspaso = typeof r.m_ci === 'number' && typeof r.t_ab === 'number' && r.m_ci !== r.t_ab
-        ? `<tr><td colspan="5"><div class="aviso-b">El traspaso no cierra: la mañana dejó
+        ? `<tr><td colspan="6"><div class="aviso-b">El traspaso no cierra: la mañana dejó
              ${r.m_ci} y la tarde contó ${r.t_ab}
              (${r.t_ab > r.m_ci ? '+' : ''}${r.t_ab - r.m_ci}).</div></td></tr>`
         : '';
       return `<tr>
         <td class="dia">${diaCorto(r.fecha)}</td>
-        ${celda(r.m_ab)}${celda(r.m_ci)}${celda(r.t_ab)}${celda(r.t_ci)}
+        ${celda(r.m_ab)}${celda(r.m_ci)}${celda(r.t_ab)}${celda(r.t_ci)}${celdaSal(r)}
       </tr>${traspaso}`;
     }).join('');
 
     return `<section class="bcat">
       <header>
         <h3>${esc(cat.nombre)}</h3>
-        <div class="hoy">${nivel == null ? '—' : nivel}<small>al último conteo</small></div>
+        ${conSal.length
+          ? `<div class="hoy">${totalSal}<small>salieron en ${conSal.length} ${conSal.length === 1 ? 'día' : 'días'}</small></div>`
+          : `<div class="hoy">${nivel == null ? '—' : nivel}<small>al último conteo</small></div>`}
       </header>
       <table class="btab">
         <thead>
-          <tr><th></th><th colspan="2" class="grupo">mañana</th><th colspan="2" class="grupo">tarde</th></tr>
-          <tr><th>Día</th><th>abrió</th><th>cerró</th><th>abrió</th><th>cerró</th></tr>
+          <tr><th></th><th colspan="2" class="grupo">mañana</th><th colspan="2" class="grupo">tarde</th><th></th></tr>
+          <tr><th>Día</th><th>abrió</th><th>cerró</th><th>abrió</th><th>cerró</th><th>salieron</th></tr>
         </thead>
         <tbody>${cuerpo}</tbody>
       </table>

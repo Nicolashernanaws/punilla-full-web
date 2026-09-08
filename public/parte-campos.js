@@ -22,15 +22,24 @@
     bj_fia: { lab: 'Bandejas de fiambre', unidad: 'u' },
     bj_piz: { lab: 'Bandejas de pizza', unidad: 'u' },
     hormas: { lab: 'Hormas abiertas', unidad: 'u' },
+    hormas_cerr: { lab: 'Hormas cerradas', unidad: 'u' },
     // Fiambrería, al salir
     m_merma: { lab: 'Merma del turno', unidad: 'kg' },
+    m_arm_pic: { lab: 'Picadas que armaste', unidad: 'u' },
+    m_arm_fia: { lab: 'Bandejas de fiambre que armaste', unidad: 'u' },
+    m_arm_piz: { lab: 'Pizzas que armaste', unidad: 'u' },
     m_out_pic: { lab: 'Bandejas de picada al salir', unidad: 'u' },
     m_out_fia: { lab: 'Bandejas de fiambre al salir', unidad: 'u' },
     m_out_piz: { lab: 'Bandejas de pizza al salir', unidad: 'u' },
+    m_hormas_out: { lab: 'Hormas abiertas al salir', unidad: 'u' },
     t_merma: { lab: 'Merma del turno', unidad: 'kg' },
+    t_arm_pic: { lab: 'Picadas que armaste', unidad: 'u' },
+    t_arm_fia: { lab: 'Bandejas de fiambre que armaste', unidad: 'u' },
+    t_arm_piz: { lab: 'Pizzas que armaste', unidad: 'u' },
     t_out_pic: { lab: 'Bandejas de picada al salir', unidad: 'u' },
     t_out_fia: { lab: 'Bandejas de fiambre al salir', unidad: 'u' },
     t_out_piz: { lab: 'Bandejas de pizza al salir', unidad: 'u' },
+    t_hormas_out: { lab: 'Hormas abiertas al salir', unidad: 'u' },
     // Encargado
     caja_ap: { lab: 'Fondo de caja verificado', unidad: '$' },
     c_sistema: { lab: 'Corte por sistema', unidad: '$' },
@@ -111,9 +120,12 @@
    * escriben en el campo de salida: picada, fiambre, pizza.
    */
   const BANDEJAS = [
-    { nombre: 'Picada', abrio: 'bj_pic', mOut: 'm_out_pic', tOut: 't_out_pic' },
-    { nombre: 'Fiambre', abrio: 'bj_fia', mOut: 'm_out_fia', tOut: 't_out_fia' },
-    { nombre: 'Pizza', abrio: 'bj_piz', mOut: 'm_out_piz', tOut: 't_out_piz' },
+    { nombre: 'Picada', abrio: 'bj_pic',
+      mArm: 'm_arm_pic', mOut: 'm_out_pic', tArm: 't_arm_pic', tOut: 't_out_pic' },
+    { nombre: 'Fiambre', abrio: 'bj_fia',
+      mArm: 'm_arm_fia', mOut: 'm_out_fia', tArm: 't_arm_fia', tOut: 't_out_fia' },
+    { nombre: 'Pizza', abrio: 'bj_piz',
+      mArm: 'm_arm_piz', mOut: 'm_out_piz', tArm: 't_arm_piz', tOut: 't_out_piz' },
   ];
 
   global.PARTE_BANDEJAS = BANDEJAS;
