@@ -230,3 +230,51 @@ test('el front del tablero pide un PIN, no la ADMIN_KEY', () => {
   // Y si la sesion sigue viva, entra solo: eso es lo que lo hace rapido.
   assert.match(html, /credentials: 'same-origin'/);
 });
+
+// ── El acceso directo al tablero (8/9) ──────────────────────────────────────
+//
+// Nico: "pasame mi url que yo pueda entrar sin contraseña. acceso directo".
+//
+// 🔴 NO ES "SIN CONTRASEÑA": ES QUE LA CONTRASEÑA SEA EL LINK. El tablero muestra
+// los nombres de todos, la línea de tiempo entera y los montos de la caja. Un
+// `/parte/admin` abierto lo deja a la vista de cualquiera que adivine la URL —y
+// `/parte/admin` se adivina en el primer intento.
+//
+// El link lleva un token largo al azar: se guarda en favoritos, se toca una vez y
+// entra. Lo que cambia respecto de dejarlo abierto es que ese link NO se adivina,
+// y que se puede matar cambiando una variable en Railway sin tocar código.
+//
+// Lo que hay que decirle a Nico y está escrito en el commit: quien tenga el link,
+// entra. No va a un grupo.
+
+test('el link directo deja una sesión y manda al tablero', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /r\.get\('\/t\/:token'/);
+  // Deja la MISMA cookie que el PIN: no hay un segundo camino de sesión que
+  // mantener sincronizado.
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,2600}cabeceraCookieAdmin\(crearToken/);
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,2700}redirect\('\/parte\/admin'\)/);
+});
+
+test('🔴 el token se compara en tiempo constante y con largo mínimo', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Un `===` se corta en el primer carácter distinto y eso se puede medir.
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,2200}timingSafeEqual/);
+  // Y un token corto en la URL es peor que un PIN: no lo frena ningún límite de
+  // intentos porque no hay a quién atribuírselos.
+  assert.match(rutas, /LARGO_MINIMO_TOKEN|token.*length\s*<\s*\d{2}/);
+});
+
+test('🔴 un intento con token equivocado queda anotado', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Si alguien está probando links, tiene que verse en la línea de tiempo igual
+  // que los PIN fallidos.
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,2500}login_fallido/);
+});
+
+test('sin PARTE_ADMIN_TOKEN seteado, el link directo no existe', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Que la variable esté vacía no puede significar "entra cualquiera".
+  assert.match(rutas, /PARTE_ADMIN_TOKEN/);
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,1800}esperado[\s\S]{0,400}404/);
+});
