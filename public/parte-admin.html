@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parte Diario · Tablero</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Public+Sans:wght@400;500;600;700&display=swap">
 <script src="/parte-campos.js"></script>
 <style>
   /* Lo que pidió Nico: VER LOS MOVIMIENTOS GUARDADOS. El tablero no es un
@@ -60,6 +63,40 @@
   .mov .baja { color: var(--txt); }
   .mov .falta { color: var(--suave); }
   .nota { margin-top: .5rem; font-size: .88rem; color: var(--suave); font-style: italic; }
+
+  /* ── Bandejas ───────────────────────────────────────────────────────────
+     Small multiples: un bloque por categoría. La identidad la da el título,
+     NO el color — así no hace falta una paleta categórica, que con verde y
+     rojo fallaba la separación para daltonismo (ΔE 5,5 en deuteranopía).
+     El único color es el ámbar de la marca, y sólo donde algo no cierra. */
+  .bandejas { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); }
+  .bcat { background: var(--panel); border: 1px solid var(--borde); border-radius: 10px; padding: .9rem 1rem 1rem; }
+  .bcat > header { padding: 0; border: 0; display: block; margin-bottom: .6rem; }
+  .bcat h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+  .bcat .hoy { font-family: Anton, system-ui, sans-serif; font-size: 2.4rem; line-height: 1;
+               letter-spacing: .01em; margin-top: .15rem; }
+  .bcat .hoy small { font-family: inherit; font-size: .8rem; color: var(--suave);
+                     font-family: 'Public Sans', system-ui, sans-serif; margin-left: .4rem; }
+
+  .btab { width: 100%; border-collapse: collapse; font-size: .84rem; }
+  .btab th { color: var(--suave); font-weight: 500; font-size: .74rem; padding: 0 0 .3rem;
+             text-align: right; white-space: nowrap; }
+  .btab th:first-child { text-align: left; }
+  .btab td { padding: .3rem 0; border-top: 1px solid var(--borde); vertical-align: top; }
+  .btab td:not(:first-child) { text-align: right; width: 4.2rem; }
+  .btab .dia { color: var(--suave); white-space: nowrap; }
+  .btab .n { font-variant-numeric: tabular-nums; display: block; }
+  .btab .sin { color: var(--suave); }
+  /* La barra: fina, extremos redondeados, anclada al mismo cero en toda la
+     columna. Es magnitud, no identidad: un solo tono para todas. */
+  /* `display:block` no es decorativo: es un <span>, y sin esto el alto no le
+     aplica y la barra queda de ancho cero. */
+  .barra { display: block; height: 4px; border-radius: 2px; background: var(--borde); margin-top: .2rem; }
+  .barra i { display: block; height: 100%; border-radius: 2px; background: #6e6552; }
+  .grupo { color: var(--suave); font-size: .7rem; font-weight: 500; }
+  /* Lo único con color, y nunca solo: siempre con la palabra al lado. */
+  .aviso-b { margin-top: .45rem; font-size: .78rem; color: var(--amb);
+             border-left: 2px solid var(--amb); padding-left: .5rem; }
   h2 { font-size: 1rem; margin: 1.8rem 0 .6rem; }
   .linea { border-left: 2px solid var(--borde); margin-left: .5rem; padding-left: .9rem; }
   .ev { display: grid; grid-template-columns: 3.4rem 6.5rem 1fr; gap: .6rem;
@@ -113,6 +150,13 @@
     turno, no durante.
   </p>
   <div class="linea" id="linea"></div>
+
+  <h2>Bandejas del mostrador</h2>
+  <p class="quien" style="margin:.2rem 0 .8rem">
+    Lo que había en el mostrador en los cuatro momentos del día. Lo que cierra un turno
+    tiene que ser lo que cuenta el siguiente al entrar: cuando no coincide, se marca.
+  </p>
+  <div class="bandejas" id="bandejas"></div>
 
   <h2>Últimos 30 días</h2>
   <div id="rango"></div>
@@ -268,6 +312,106 @@ function tarjeta(p) {
   </div>`;
 }
 
+/**
+ * Los tres números que el turno escribe al salir, en un solo campo.
+ *
+ * 🔴 EL CAMPO ADMITE CUALQUIER COSA Y POR ESO A VECES NO SE PUEDE LEER. La
+ * etiqueta dice "(pic/fia/piz)" y a veces llega "6,12,1" —que se entiende— y a
+ * veces "27", que puede ser el total, o 2 y 7, o 27 picadas. Medido el 8/9:
+ * TRES de cinco días llegaron con un solo número.
+ *
+ * Devuelve null cuando no se puede leer. Adivinar sería peor: el panel diría un
+ * número con la misma cara de seguridad que los que sí se sabe.
+ */
+function tresNumeros(v) {
+  if (v == null || v === '') return null;
+  const partes = String(v).split(/[^0-9]+/).filter((x) => x !== '');
+  return partes.length === 3 ? partes.map(Number) : null;
+}
+
+function panelBandejas(dias) {
+  const cont = $('#bandejas');
+  const cats = window.PARTE_BANDEJAS || [];
+
+  // Un día = la fila de fiambrería mañana y la de tarde.
+  const porDia = new Map();
+  for (const d of dias) {
+    if (d.puesto !== 'fiam_m' && d.puesto !== 'fiam_t') continue;
+    if (!porDia.has(d.fecha)) porDia.set(d.fecha, {});
+    porDia.get(d.fecha)[d.puesto] = d.campos || {};
+  }
+  const fechas = [...porDia.keys()].sort().reverse();
+
+  const num = (v) => (v == null || v === '' ? null : Number(v));
+
+  cont.innerHTML = cats.map((cat, i) => {
+    const filas = fechas.map((f) => {
+      const m = porDia.get(f).fiam_m || {};
+      const t = porDia.get(f).fiam_t || {};
+      const cerroM = tresNumeros(m.m_bj_out);
+      const cerroT = tresNumeros(t.t_bj_out);
+      return {
+        fecha: f,
+        m_ab: num(m[cat.abrio]),
+        m_ci: cerroM ? cerroM[i] : (m.m_bj_out ? 'sin leer' : null),
+        t_ab: num(t[cat.abrio]),
+        t_ci: cerroT ? cerroT[i] : (t.t_bj_out ? 'sin leer' : null),
+      };
+    }).filter((r) => [r.m_ab, r.m_ci, r.t_ab, r.t_ci].some((x) => x != null));
+
+    if (!filas.length) return '';
+
+    // Todas las barras del bloque contra el mismo cero y el mismo máximo, o
+    // comparar dos columnas seria mentira.
+    const tope = Math.max(1, ...filas.flatMap((r) =>
+      [r.m_ab, r.m_ci, r.t_ab, r.t_ci].filter((x) => typeof x === 'number')));
+
+    const celda = (v) => {
+      if (v == null) return '<td><span class="n sin">—</span></td>';
+      if (typeof v !== 'number') return `<td><span class="n sin">${esc(v)}</span></td>`;
+      return `<td><span class="n">${v}</span>
+        <span class="barra"><i style="width:${Math.round((v / tope) * 100)}%"></i></span></td>`;
+    };
+
+    const ultimo = filas[0];
+    const nivel = [ultimo.t_ci, ultimo.t_ab, ultimo.m_ci, ultimo.m_ab]
+      .find((x) => typeof x === 'number');
+
+    const cuerpo = filas.map((r) => {
+      // El traspaso: lo que dejó la mañana contra lo que contó la tarde.
+      const traspaso = typeof r.m_ci === 'number' && typeof r.t_ab === 'number' && r.m_ci !== r.t_ab
+        ? `<tr><td colspan="5"><div class="aviso-b">El traspaso no cierra: la mañana dejó
+             ${r.m_ci} y la tarde contó ${r.t_ab}
+             (${r.t_ab > r.m_ci ? '+' : ''}${r.t_ab - r.m_ci}).</div></td></tr>`
+        : '';
+      return `<tr>
+        <td class="dia">${diaCorto(r.fecha)}</td>
+        ${celda(r.m_ab)}${celda(r.m_ci)}${celda(r.t_ab)}${celda(r.t_ci)}
+      </tr>${traspaso}`;
+    }).join('');
+
+    return `<section class="bcat">
+      <header>
+        <h3>${esc(cat.nombre)}</h3>
+        <div class="hoy">${nivel == null ? '—' : nivel}<small>al último conteo</small></div>
+      </header>
+      <table class="btab">
+        <thead>
+          <tr><th></th><th colspan="2" class="grupo">mañana</th><th colspan="2" class="grupo">tarde</th></tr>
+          <tr><th>Día</th><th>abrió</th><th>cerró</th><th>abrió</th><th>cerró</th></tr>
+        </thead>
+        <tbody>${cuerpo}</tbody>
+      </table>
+    </section>`;
+  }).join('') || '<p class="quien">Todavía no hay conteos de bandejas.</p>';
+}
+
+/** "lun 7 sep", que es como se nombra un día en una conversación. */
+function diaCorto(f) {
+  const d = new Date(f + 'T12:00:00');
+  return d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
+}
+
 function hora(ts) {
   return new Date(ts).toLocaleTimeString('es-AR', {
     timeZone: 'America/Argentina/Cordoba', hour: '2-digit', minute: '2-digit', hour12: false,
@@ -306,6 +450,9 @@ async function cargar() {
       : '<p class="aviso">Todavía no hay movimientos este día.</p>';
 
     const r = await pedir('/parte/admin/api/rango');
+    // El mismo pedido alimenta las dos cosas: el panel de bandejas y la tabla
+    // de los 30 días. No hay razón para ir dos veces por lo mismo.
+    panelBandejas(r.dias);
     const porDia = new Map();
     for (const x of r.dias) {
       if (!porDia.has(x.fecha)) porDia.set(x.fecha, {});

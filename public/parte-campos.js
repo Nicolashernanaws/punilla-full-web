@@ -81,6 +81,17 @@
     PARES.flatMap((p) => [p.salidaEn, ...p.filas.map((f) => f.abrio)]).filter(Boolean),
   );
 
+  /**
+   * Las tres cosas que se cuentan en el mostrador, en el orden en que se
+   * escriben en el campo de salida: picada, fiambre, pizza.
+   */
+  const BANDEJAS = [
+    { nombre: 'Picada', abrio: 'bj_pic' },
+    { nombre: 'Fiambre', abrio: 'bj_fia' },
+    { nombre: 'Pizza', abrio: 'bj_piz' },
+  ];
+
+  global.PARTE_BANDEJAS = BANDEJAS;
   global.PARTE_CAMPOS = CAMPOS;
   global.PARTE_PARES = PARES;
   global.PARTE_EN_PARES = enPares;
