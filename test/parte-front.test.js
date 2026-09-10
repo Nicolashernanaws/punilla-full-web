@@ -447,3 +447,20 @@ test('el cartel dice qué se está mirando', () => {
   assert.match(html, /no se puede tildar ni escribir/);
   assert.match(html, /Quedó registrado en la línea de tiempo que la abriste/);
 });
+
+test('🔴 el tablero no arranca pidiendo una clave', () => {
+  // Nico, 10/9: "sacar el cuadro de clave para el dueño". Lo primero que se ve
+  // sin sesión es el recordatorio del link directo.
+  assert.match(admin, /<div id="puerta" hidden>/);
+  assert.match(admin, /Entrá con tu link directo/);
+  assert.match(admin, /function entrar\(\)[\s\S]{0,600}puerta\.hidden = false;/);
+});
+
+test('🔴 pero el cuadro de clave sigue existiendo, como respaldo', () => {
+  // Si se rota la variable o se pierde el favorito, es la ÚNICA forma de volver
+  // a entrar sin tocar código. Sacarlo sería quedarse afuera con el local
+  // abierto y nada para hacer desde el celular.
+  assert.match(admin, /id="aMano"/);
+  assert.match(admin, /Poner la clave a mano/);
+  assert.match(admin, /\$\('#aMano'\)\.onclick = \(\) => \{[\s\S]{0,200}form\.hidden = false;/);
+});

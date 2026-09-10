@@ -253,17 +253,21 @@ test('el front del tablero pide un PIN, no la ADMIN_KEY', () => {
 
 test('el link directo deja una sesión y manda al tablero', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  assert.match(rutas, /r\.get\('\/t\/:token'/);
+  // Desde el 10/9 el link vive en /parte/admin/t/<token>, al lado del tablero.
+  assert.match(rutas, /r\.get\('\/admin\/t\/:token', entrarPorLink\)/);
+  // 🔴 Y LA RUTA VIEJA SIGUE. Es un link guardado en favoritos: sacarlo dejaría
+  // a Nico afuera del tablero desde el teléfono, sin nada que tocar.
+  assert.match(rutas, /r\.get\('\/t\/:token', entrarPorLink\)/);
   // Deja la MISMA cookie que el PIN: no hay un segundo camino de sesión que
-  // mantener sincronizado. Los tres caminos pasan por sembrarSesionAdmin().
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,2600}sembrarSesionAdmin\(res\)/);
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,2700}redirect\('\/parte\/admin'\)/);
+  // mantener sincronizado. Los cuatro caminos pasan por sembrarSesionAdmin().
+  assert.match(rutas, /function entrarPorLink[\s\S]{0,2600}sembrarSesionAdmin\(res\)/);
+  assert.match(rutas, /function entrarPorLink[\s\S]{0,2700}redirect\('\/parte\/admin'\)/);
 });
 
 test('🔴 el token se compara en tiempo constante y con largo mínimo', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   // Un `===` se corta en el primer carácter distinto y eso se puede medir.
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,2200}timingSafeEqual/);
+  assert.match(rutas, /function entrarPorLink[\s\S]{0,2200}timingSafeEqual/);
   // Y un token corto en la URL es peor que un PIN: no lo frena ningún límite de
   // intentos porque no hay a quién atribuírselos.
   assert.match(rutas, /LARGO_MINIMO_TOKEN|token.*length\s*<\s*\d{2}/);
@@ -273,14 +277,14 @@ test('🔴 un intento con token equivocado queda anotado', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   // Si alguien está probando links, tiene que verse en la línea de tiempo igual
   // que los PIN fallidos.
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,2500}login_fallido/);
+  assert.match(rutas, /function entrarPorLink[\s\S]{0,2500}login_fallido/);
 });
 
 test('sin PARTE_ADMIN_TOKEN seteado, el link directo no existe', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   // Que la variable esté vacía no puede significar "entra cualquiera".
   assert.match(rutas, /PARTE_ADMIN_TOKEN/);
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,1800}esperado[\s\S]{0,400}404/);
+  assert.match(rutas, /function entrarPorLink[\s\S]{0,1800}esperado[\s\S]{0,400}404/);
 });
 
 // ── La clave se pone UNA vez (10/9) ─────────────────────────────────────────
@@ -389,4 +393,84 @@ test('un puesto inventado no abre nada', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   assert.match(rutas, /admin\/ver\/:puesto'[\s\S]{0,300}!PUESTOS\.includes\(puesto\)/);
   assert.match(rutas, /admin\/api\/ver\/:puesto'[\s\S]{0,300}!PUESTOS\.includes\(puesto\)/);
+});
+
+// ── El link es la puerta, la clave es el respaldo (10/9) ────────────────────
+//
+// Nico: "sacar el cuadro de clave para el dueño (…) entrar por esa URL abre el
+// tablero directo, sin pedir nada (…) dejar el cuadro de clave como vía de
+// respaldo si el token cambia".
+
+const { avisoLinkDirecto, linkDirecto, tokenSugerido, LARGO_MINIMO_TOKEN } = require('../lib/parte-rutas');
+
+/** Corre `fn` con PARTE_ADMIN_TOKEN en `valor` y lo deja como estaba. */
+function conToken(valor, fn) {
+  const antes = process.env.PARTE_ADMIN_TOKEN;
+  if (valor === null) delete process.env.PARTE_ADMIN_TOKEN;
+  else process.env.PARTE_ADMIN_TOKEN = valor;
+  try { return fn(); } finally {
+    if (antes === undefined) delete process.env.PARTE_ADMIN_TOKEN;
+    else process.env.PARTE_ADMIN_TOKEN = antes;
+  }
+}
+
+test('el token que se sugiere pasa el mínimo con margen', () => {
+  const t = tokenSugerido();
+  assert.ok(t.length >= LARGO_MINIMO_TOKEN, 'salió de ' + t.length + ' caracteres');
+  // base64url: nada que haya que escapar al pegarlo en una URL ni en Railway.
+  assert.match(t, /^[A-Za-z0-9_-]+$/);
+  assert.notEqual(t, tokenSugerido(), 'dos seguidos dieron lo mismo');
+});
+
+test('con el token seteado se imprime el link completo', () => {
+  const tok = 'a'.repeat(40);
+  conToken(tok, () => {
+    const lineas = avisoLinkDirecto('https://punilla.up.railway.app').join('\n');
+    assert.match(lineas, /https:\/\/punilla\.up\.railway\.app\/parte\/admin\/t\/a{40}/);
+    // Y con la advertencia al lado: quien tiene el link, entra.
+    assert.match(lineas, /NO a un grupo/);
+  });
+});
+
+test('la barra de más en la base no duplica la del link', () => {
+  conToken('b'.repeat(40), () => {
+    assert.equal(
+      linkDirecto('https://punilla.up.railway.app/'),
+      'https://punilla.up.railway.app/parte/admin/t/' + 'b'.repeat(40),
+    );
+  });
+});
+
+test('🔴 sin token, el aviso trae uno listo para pegar', () => {
+  // Que la variable esté vacía no puede significar "entra cualquiera": el link
+  // no existe, y lo que se imprime es cómo hacerlo existir.
+  conToken(null, () => {
+    assert.equal(linkDirecto('https://x.com'), null);
+    const lineas = avisoLinkDirecto('https://x.com').join('\n');
+    assert.match(lineas, /no está seteado/);
+    const m = lineas.match(/PARTE_ADMIN_TOKEN=([A-Za-z0-9_-]+)/);
+    assert.ok(m, 'no imprimió un token para pegar');
+    assert.ok(m[1].length >= LARGO_MINIMO_TOKEN);
+  });
+});
+
+test('🔴 un token corto no habilita el link y se avisa por qué', () => {
+  // Un token corto en la URL es peor que un PIN: no lo frena ningún contador de
+  // intentos, porque no hay a quién atribuírselos más que a una IP que se rota.
+  conToken('corto', () => {
+    assert.equal(linkDirecto('https://x.com'), null);
+    const lineas = avisoLinkDirecto('https://x.com').join('\n');
+    assert.match(lineas, /5 caracteres y el mínimo son 32/);
+    assert.match(lineas, /PARTE_ADMIN_TOKEN=[A-Za-z0-9_-]{32,}/);
+  });
+});
+
+test('el aviso se imprime una sola vez, al arrancar', () => {
+  const srv = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  // Dentro del callback de listen, no en un middleware: en cada request sería
+  // el token en los logs mil veces por día.
+  assert.match(srv, /app\.listen\(PORT, \(\) => \{[\s\S]{0,400}avisoLinkDirecto\(baseUrl\(\)\)/);
+  assert.doesNotMatch(srv, /app\.use\([^)]*avisoLinkDirecto/);
+  // El dominio lo pone Railway solo; PARTE_BASE_URL es para el dominio propio.
+  assert.match(srv, /RAILWAY_PUBLIC_DOMAIN/);
 });

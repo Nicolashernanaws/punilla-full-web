@@ -129,8 +129,11 @@
    el atributo hidden estuviera puesto. Las reglas van acá y el !important deja
    que hidden mande. */
 [hidden]{display:none !important}
-#login{max-width:20rem;margin:3rem auto;display:grid;gap:.6rem}
+#login,#puerta{max-width:22rem;margin:3rem auto;display:grid;gap:.6rem}
 #login input{padding:.6rem;font-size:1.1rem}
+/* El respaldo no compite con el camino normal: es un botón callado. */
+#aMano{background:transparent;border-color:var(--borde);color:var(--suave);font-size:.85rem}
+#aMano:hover{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -146,6 +149,26 @@
   <!-- El PIN se pide acá adentro y no con window.prompt: el cuadro gris del
        navegador en el teléfono no deja ver de qué se trata, no se puede estilar
        y no abre el teclado numérico. -->
+  <!--
+    Lo primero que se ve cuando no hay sesión NO es un cuadro de clave.
+    Nico, 10/9: "sacar el cuadro de clave para el dueño".
+
+    🔴 PERO NO SE BORRA, SE GUARDA DETRÁS. El link directo es un token en una
+    URL: si se rota la variable, si el favorito se pierde o si el teléfono se
+    cambia, el cuadro de clave es la ÚNICA forma de volver a entrar sin tocar
+    código. Sacarlo del todo sería quedarse afuera del tablero con el local
+    abierto y nada para hacer desde el celular.
+  -->
+  <div id="puerta" hidden>
+    <p style="margin:0 0 .6rem"><b>Entrá con tu link directo.</b></p>
+    <p class="aviso" style="margin:0 0 .9rem">
+      Es el que guardaste en favoritos. Lo abrís y el tablero se abre solo, sin
+      pedirte nada, y queda entrado 30 días. Si lo perdiste, está impreso en los
+      logs de Railway cada vez que arranca el servicio.
+    </p>
+    <button id="aMano" type="button">Poner la clave a mano</button>
+  </div>
+
   <form id="login" hidden>
     <label for="pin" style="font-weight:600">PIN del tablero</label>
     <input type="password" id="pin" inputmode="numeric" autocomplete="off"
@@ -236,9 +259,17 @@ async function mandarPin(dato) {
  */
 function entrar() {
   return new Promise((listo) => {
+    const puerta = $('#puerta');
     const form = $('#login');
-    form.hidden = false;
-    $('#pin').focus();
+    /* El camino normal es el link directo, así que lo primero que se ve es eso.
+       El cuadro de la clave aparece sólo si se lo pide: es el respaldo para
+       cuando el token cambió y el favorito viejo dejó de servir. */
+    puerta.hidden = false;
+    $('#aMano').onclick = () => {
+      puerta.hidden = true;
+      form.hidden = false;
+      $('#pin').focus();
+    };
     form.onsubmit = async (e) => {
       e.preventDefault();
       const pin = $('#pin').value.trim();
@@ -246,6 +277,7 @@ function entrar() {
       if (await mandarPin(pin)) {
         $('#pin').value = '';
         form.hidden = true;
+        puerta.hidden = true;
         listo(true);
       } else {
         $('#pin').value = '';

@@ -12,7 +12,7 @@ const {
 const { ventanaAbierta, armarPadron, CIERRE, SORTEO_TEXTO } = require('./lib/sorteo');
 const { query } = require('./db/db');
 const { bootstrap } = require('./db/bootstrap');
-const { crearRutasParte } = require('./lib/parte-rutas');
+const { crearRutasParte, avisoLinkDirecto } = require('./lib/parte-rutas');
 
 const app = express();
 app.set('trust proxy', 1); // Railway está detrás de proxy
@@ -355,6 +355,20 @@ app.get('/healthz', (_req, res) => res.json({ ok: true }));
 app.use(express.static(PUBLIC, { extensions: ['html'] }));
 
 const PORT = process.env.PORT || 3000;
+
+/**
+ * De dónde sale el dominio para armar el link del tablero.
+ *
+ * `RAILWAY_PUBLIC_DOMAIN` la pone Railway sola en el servicio. `PARTE_BASE_URL`
+ * está para el día que haya dominio propio: sin ella el link impreso apuntaría
+ * al `.up.railway.app` y sería otro link más para confundirse.
+ */
+function baseUrl() {
+  if (process.env.PARTE_BASE_URL) return process.env.PARTE_BASE_URL;
+  if (process.env.RAILWAY_PUBLIC_DOMAIN) return 'https://' + process.env.RAILWAY_PUBLIC_DOMAIN;
+  return 'http://localhost:' + PORT;
+}
+
 if (require.main === module) {
   // Avisos de configuración en producción
   if (process.env.NODE_ENV === 'production') {
@@ -363,7 +377,12 @@ if (require.main === module) {
     if (process.env.WA_NUMBER === undefined) console.warn('[punilla] ⚠ WA_NUMBER no seteado (usando placeholder)');
   }
   bootstrap()
-    .then(() => app.listen(PORT, () => console.log(`[punilla] escuchando en :${PORT}`)))
+    .then(() => app.listen(PORT, () => {
+      console.log(`[punilla] escuchando en :${PORT}`);
+      // Una sola vez, al arrancar: es la puerta del tablero y tiene que estar a
+      // mano el día que Nico cambie de teléfono o pierda el favorito.
+      for (const linea of avisoLinkDirecto(baseUrl())) console.log('[punilla] ' + linea);
+    }))
     .catch((e) => {
       console.error('[punilla] fallo en bootstrap, no arranco:', e);
       process.exit(1);
