@@ -64,6 +64,13 @@
   .mov .falta { color: var(--suave); }
   .nota { margin-top: .5rem; font-size: .88rem; color: var(--suave); font-style: italic; }
 
+  /* Abrir la lista del puesto tal cual la ve quien la usa. Va abajo de todo en
+     la tarjeta y sin color: es una salida de la pantalla, no una acción. */
+  .verlo { display: inline-block; margin-top: .7rem; padding: .4rem .7rem;
+           border: 1px solid var(--borde); border-radius: 6px; text-decoration: none;
+           color: var(--txt); font-size: .85rem; }
+  .verlo:hover { background: #262119; }
+
   /* ── Bandejas ───────────────────────────────────────────────────────────
      Small multiples: un bloque por categoría. La identidad la da el título,
      NO el color — así no hace falta una paleta categórica, que con verde y
@@ -110,6 +117,8 @@
      línea de tiempo, así que se marca sola en vez de dejar que se busque. */
   .ev.rafaga { background: color-mix(in srgb, var(--amb) 10%, transparent); }
   .ev.destilde { opacity: .7; }
+  /* Mirar no es trabajar: la vista del dueño no compite con lo que hizo el turno. */
+  .ev.admin_view { opacity: .6; font-style: italic; }
   .aviso { color: var(--suave); font-size: .9rem; }
   table { width: 100%; border-collapse: collapse; font-size: .9rem; }
   th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--borde); }
@@ -140,8 +149,12 @@
   <form id="login" hidden>
     <label for="pin" style="font-weight:600">PIN del tablero</label>
     <input type="password" id="pin" inputmode="numeric" autocomplete="off"
-           pattern="[0-9]*" placeholder="6 dígitos">
+           placeholder="6 dígitos">
     <button type="submit">Entrar</button>
+    <!-- Lo que hace que no haya que tipearlo más. Se dice acá porque si no, la
+         única forma de enterarse es notar que dejó de pedirlo. -->
+    <p class="aviso" style="margin:0">Queda guardado 30 días en este teléfono.
+      También sirve la clave larga del tablero.</p>
   </form>
 
   <div class="grid" id="puestos"></div>
@@ -195,17 +208,24 @@ async function pedir(url) {
   return r.json();
 }
 
-/** Manda el PIN. Devuelve true si entro. */
-async function mandarPin(pin) {
+/**
+ * Manda lo que se haya puesto. Devuelve true si entro.
+ *
+ * Seis dígitos son el PIN; cualquier otra cosa es la clave larga del tablero.
+ * Se decide acá y no se le pregunta a nadie: quien la pone ya sabe cuál tiene, y
+ * un selector «¿PIN o clave?» sería un paso de mas para el 99% de las veces.
+ */
+async function mandarPin(dato) {
+  const v = String(dato).trim();
   const r = await fetch('/parte/admin/api/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     credentials: 'same-origin',
-    body: JSON.stringify({ pin: String(pin).trim() }),
+    body: JSON.stringify(/^\d{4,10}$/.test(v) ? { pin: v } : { clave: v }),
   });
   if (r.status === 429) { $('#estado').textContent = 'Demasiados intentos. Esperá 15 minutos.'; return false; }
   if (r.status === 503) { $('#estado').textContent = 'Falta setear PARTE_ADMIN_PIN en Railway.'; return false; }
-  if (!r.ok) { $('#estado').textContent = 'PIN incorrecto.'; return false; }
+  if (!r.ok) { $('#estado').textContent = 'No es el PIN ni la clave.'; return false; }
   $('#estado').textContent = '';
   return true;
 }
@@ -222,7 +242,7 @@ function entrar() {
     form.onsubmit = async (e) => {
       e.preventDefault();
       const pin = $('#pin').value.trim();
-      if (!/^\d{4,10}$/.test(pin)) { $('#estado').textContent = 'El PIN son números.'; return; }
+      if (pin.length < 4) { $('#estado').textContent = 'Falta el PIN.'; return; }
       if (await mandarPin(pin)) {
         $('#pin').value = '';
         form.hidden = true;
@@ -293,7 +313,14 @@ function bloqueMovimiento(par, campos) {
   </table></div>`;
 }
 
-function tarjeta(p) {
+/**
+ * Una tarjeta por puesto, con la salida a la pantalla real del puesto.
+ *
+ * 🔴 EL BOTÓN LLEVA LA FECHA QUE SE ESTÁ MIRANDO. Sin eso, mirar el jueves y
+ * tocar «ver» abriría el turno de HOY con el título del jueves: se estaría
+ * leyendo un turno creyendo que es otro, que es peor que no poder verlo.
+ */
+function tarjeta(p, fecha) {
   const todos = p.campos || {};
   const pares = (window.PARTE_PARES || [])
     .map((par) => bloqueMovimiento(par, todos))
@@ -324,6 +351,7 @@ function tarjeta(p) {
       .join('')}</div>`
       : (pares ? '' : '<div class="quien" style="margin-top:.5rem">sin campos cargados</div>')}
     ${p.nota ? `<div class="nota">“${esc(p.nota)}”</div>` : ''}
+    <a class="verlo" href="/parte/admin/ver/${encodeURIComponent(p.puesto)}?fecha=${encodeURIComponent(fecha)}">Ver como lo ve él</a>
   </div>`;
 }
 
@@ -471,6 +499,21 @@ function hora(ts) {
   });
 }
 
+/**
+ * Cómo se lee cada movimiento en la línea de tiempo.
+ *
+ * `admin_view` es la vista de lectura del dueño, y se dice con palabras en vez
+ * de con el id crudo: su `valor` es la huella de la IP —el mismo dato que
+ * guardan los intentos fallidos, para distinguir dispositivos sin anotar la IP—
+ * y mostrarlo como "admin_view = 3f2a…" no le dice nada a nadie.
+ */
+function detalleEvento(e) {
+  if (e.tipo === 'admin_view') return 'abrió esta lista en sólo lectura';
+  return esc(e.tipo)
+    + (e.item_id ? ' · ' + esc(e.item_id) : '')
+    + (e.valor ? ' = ' + esc(e.valor) : '');
+}
+
 /** Marca los eventos que caen en una ráfaga de 5+ en 2 minutos. */
 function marcarRafagas(evs) {
   const VENTANA = 2 * 60 * 1000, MINIMO = 5;
@@ -490,14 +533,14 @@ async function cargar() {
   try {
     const d = await pedir('/parte/admin/api/dia?fecha=' + encodeURIComponent(f));
     $('#fecha').value = d.fecha;
-    $('#puestos').innerHTML = d.puestos.map(tarjeta).join('');
+    $('#puestos').innerHTML = d.puestos.map((p) => tarjeta(p, d.fecha)).join('');
 
     const rafagas = marcarRafagas(d.eventos);
     $('#linea').innerHTML = d.eventos.length
       ? d.eventos.map((e, i) => `<div class="ev ${e.tipo} ${rafagas.has(i) ? 'rafaga' : ''}">
           <time>${hora(e.ts)}</time>
-          <span class="p">${esc(e.nombre || '—')}</span>
-          <span>${esc(e.tipo)}${e.item_id ? ' · ' + esc(e.item_id) : ''}${e.valor ? ' = ' + esc(e.valor) : ''}
+          <span class="p">${esc(e.nombre || (e.tipo === 'admin_view' ? 'Nico' : '—'))}</span>
+          <span>${detalleEvento(e)}
             <span class="quien">(${esc(NOMBRES[e.puesto] || e.puesto)})</span></span>
         </div>`).join('')
       : '<p class="aviso">Todavía no hay movimientos este día.</p>';
@@ -556,9 +599,31 @@ async function cargarOEntrar() {
   }
 }
 
+/*
+ * La clave que viene en la URL: se canjea por la sesión y SE BORRA DE LA BARRA.
+ *
+ * 🔴 LO QUE SE BORRA ES LO IMPORTANTE. Si el `?key=…` se quedara en la barra de
+ * direcciones, el navegador lo guardaría en el historial y lo ofrecería como
+ * sugerencia a cualquiera que tipee "punilla" en ese teléfono, y viajaría en el
+ * Referer y en cada captura de pantalla que Nico mande. Con `replaceState` la
+ * clave existe durante el primer request y después queda sólo la cookie, que es
+ * HttpOnly y no la lee ni el JavaScript de esta página.
+ *
+ * Se pone una vez: la sesión que deja dura 30 días y se renueva cada vez que se
+ * abre el tablero.
+ */
+async function canjearClaveDeLaUrl() {
+  const u = new URL(location.href);
+  const k = u.searchParams.get('key');
+  if (!k) return;
+  u.searchParams.delete('key');
+  history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+  await mandarPin(k);
+}
+
 $('#fecha').value = new Date().toISOString().slice(0, 10);
 $('#fecha').addEventListener('change', () => cargarOEntrar());
-cargarOEntrar();
+canjearClaveDeLaUrl().then(cargarOEntrar, cargarOEntrar);
 </script>
 </body>
 </html>

@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS parte_evento (
   puesto     TEXT NOT NULL,
   persona_id INT REFERENCES parte_persona(id),
   -- tilde | destilde | campo | nota | cierre | reapertura | login
+  -- login_fallido | admin_view (el dueño abrió la lista de ese puesto en lectura)
   tipo       TEXT NOT NULL,
   item_id    TEXT,
   valor      TEXT,

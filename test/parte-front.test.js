@@ -347,3 +347,103 @@ test('los pares apuntan a campos que existen', () => {
     }
   }
 });
+
+// ── La clave se pone UNA vez (10/9) ─────────────────────────────────────────
+
+test('el tablero entra con el PIN o con la clave larga', () => {
+  // Seis dígitos son el PIN; cualquier otra cosa es la clave. Se decide solo:
+  // un selector «¿PIN o clave?» sería un paso de más para el 99% de las veces.
+  assert.match(admin, /\{ pin: v \} : \{ clave: v \}/);
+  // Y se avisa que queda guardado, porque si no la única forma de enterarse es
+  // notar que dejó de pedirlo.
+  assert.match(admin, /30 días en este teléfono/);
+});
+
+test('🔴 la clave que viene en la URL se borra de la barra', () => {
+  // Si el `?key=…` se quedara ahí, el navegador lo guardaría en el historial y
+  // lo ofrecería como sugerencia, y viajaría en cada captura de pantalla.
+  assert.match(admin, /searchParams\.delete\('key'\)/);
+  assert.match(admin, /history\.replaceState/);
+  // Y se canjea ANTES de cargar, así el primer request ya va con la sesión.
+  assert.match(admin, /canjearClaveDeLaUrl\(\)\.then\(cargarOEntrar, cargarOEntrar\)/);
+});
+
+test('el tablero sigue sin nombrar la clave en la pantalla', () => {
+  // El test de arriba ya lo fija; se repite acá porque ahora el formulario la
+  // acepta y es justo el momento en que alguien la escribiría como ejemplo.
+  assert.equal(admin.includes('dev-admin'), false);
+});
+
+// ── Ver como lo ve él (10/9) ────────────────────────────────────────────────
+
+test('cada tarjeta abre la pantalla del puesto, con la fecha que se mira', () => {
+  // Sin la fecha, mirar el jueves y tocar «ver» abriría el turno de HOY con el
+  // título del jueves: leer un turno creyendo que es otro es peor que no verlo.
+  assert.match(admin, /\/parte\/admin\/ver\/\$\{encodeURIComponent\(p\.puesto\)\}\?fecha=/);
+  assert.match(admin, /Ver como lo ve él/);
+  assert.match(admin, /d\.puestos\.map\(\(p\) => tarjeta\(p, d\.fecha\)\)/);
+});
+
+test('la apertura del dueño se lee con palabras en la línea de tiempo', () => {
+  // Su `valor` es la huella de la IP: "admin_view = 3f2a…" no le dice nada a
+  // nadie.
+  assert.match(admin, /e\.tipo === 'admin_view'/);
+  assert.match(admin, /abrió esta lista en sólo lectura/);
+});
+
+test('la vista de lectura sale de la URL y sólo con un puesto real', () => {
+  assert.ok(html.includes("location.pathname.match(/^\\/parte\\/admin\\/ver\\/"), 'la vista no sale de la URL');
+  assert.match(html, /PUESTOS\.some\(p => p\.id === m\[1\]\)/);
+  assert.match(html, /const SOLO_LECTURA = !!VISTA;/);
+});
+
+test('🔴 en lectura no se escribe nada: el corte va en evento()', () => {
+  // Todo lo que escribe —tildes, campos, la nota, el cierre y la reapertura—
+  // pasa por evento() antes de tocar la cola. Cortar en el portón y no en cada
+  // botón es lo que hace que siga siendo de lectura el día que se agregue un
+  // botón nuevo y alguien se olvide de preguntarle a SOLO_LECTURA.
+  assert.match(html, /function evento\(tipo, itemId, valor, detalle\)\{[\s\S]{0,500}if\(SOLO_LECTURA\) return;/);
+  // Y el candado de verdad está en el servidor: el dueño entra con la cookie del
+  // tablero, y /parte/api/evento le contesta 401.
+  assert.match(html, /EL CANDADO NO ESTÁ ACÁ, ESTÁ EN EL SERVIDOR/);
+});
+
+test('🔴 en lectura no se toca el localStorage de la persona', () => {
+  // En un teléfono compartido, guardar pf_yo le pisaría la sesión a quien está
+  // trabajando y lo que ella tildara quedaría firmado con el puesto equivocado.
+  assert.match(html, /if\(SOLO_LECTURA\) yo = \{puesto: VISTA, nombre: '', lectura: true\};/);
+  const vista = html.slice(html.indexOf('async function traerVista'), html.indexOf('async function traerDia'));
+  assert.doesNotMatch(vista, /localStorage/);
+});
+
+test('en lectura la tarea no es un botón y el campo no se escribe', () => {
+  // Una casilla que se puede enfocar y apretar sin que pase nada se lee como un
+  // bug, no como una vista de lectura.
+  assert.match(html, /if\(!SOLO_LECTURA\)\{ d\.setAttribute\('role','button'\); d\.tabIndex = 0; \}/);
+  assert.match(html, /if\(!SOLO_LECTURA\)\{\s*\n\s*d\.onclick = toggle;/);
+  // readOnly y no disabled: el número de la caja es justo lo que se vino a leer.
+  assert.match(html, /inp\.readOnly = true;/);
+  assert.match(html, /ta\.readOnly = true;/);
+});
+
+test('en lectura los datos salen del tablero, no de la API de los puestos', () => {
+  // La cookie que trae el dueño es la del tablero; la del Parte ni la tiene.
+  assert.match(html, /'\/parte\/admin\/api\/ver\/' \+ encodeURIComponent\(VISTA\)/);
+  assert.match(html, /if\(SOLO_LECTURA\) return traerVista\(\);/);
+  // Un 401 lo manda al tablero: acá no hay PIN que pedir.
+  assert.match(html, /if\(r\.status === 401\)\{ location\.href = '\/parte\/admin'; return; \}/);
+});
+
+test('🔴 en lectura no se drena la cola de otro', () => {
+  // Si alguien usó ese mismo navegador para trabajar, mandar su cola desde acá
+  // escribiría eventos viejos con una sesión que no es la de esa persona.
+  assert.match(html, /if\(SOLO_LECTURA\)\{[\s\S]{0,400}setInterval\(traerDia, 20000\);\s*\n\s*return;/);
+});
+
+test('el cartel dice qué se está mirando', () => {
+  // Sin esto la pantalla parece rota: es idéntica a la de la gente, el primer
+  // reflejo es tocar una tarea y no pasa nada.
+  assert.match(html, /function cartelLectura\(\)/);
+  assert.match(html, /no se puede tildar ni escribir/);
+  assert.match(html, /Quedó registrado en la línea de tiempo que la abriste/);
+});

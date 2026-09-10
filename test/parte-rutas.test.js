@@ -194,9 +194,13 @@ test('el tope por puesto es alto a propósito', () => {
 test('el tablero se puede abrir con la cookie, sin la ADMIN_KEY', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   assert.match(rutas, /function sesionAdmin\(req\)/);
-  // requiereAdmin acepta las dos: la cookie para la persona, la key para curl y
-  // los scripts, que es como se verifica esto sin un navegador.
-  assert.match(rutas, /function requiereAdmin[\s\S]{0,400}sesionAdmin\(req\)/);
+  // Acepta las dos: la cookie para la persona, la key para curl y los scripts,
+  // que es como se verifica esto sin un navegador. Desde el 10/9 el chequeo vive
+  // en admitidoComoAdmin(), porque lo comparten la API (401 con JSON) y las
+  // páginas (redirect al tablero, que un JSON en blanco no se puede ni tocar).
+  assert.match(rutas, /function admitidoComoAdmin[\s\S]{0,400}sesionAdmin\(req\)/);
+  assert.match(rutas, /function requiereAdmin\(req, res, next\)[\s\S]{0,200}admitidoComoAdmin/);
+  assert.match(rutas, /function requiereAdminPagina[\s\S]{0,300}redirect\('\/parte\/admin'\)/);
 });
 
 test('🔴 la cookie del tablero no vale para /parte', () => {
@@ -251,8 +255,8 @@ test('el link directo deja una sesión y manda al tablero', () => {
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   assert.match(rutas, /r\.get\('\/t\/:token'/);
   // Deja la MISMA cookie que el PIN: no hay un segundo camino de sesión que
-  // mantener sincronizado.
-  assert.match(rutas, /\/t\/:token'[\s\S]{0,2600}cabeceraCookieAdmin\(crearToken/);
+  // mantener sincronizado. Los tres caminos pasan por sembrarSesionAdmin().
+  assert.match(rutas, /\/t\/:token'[\s\S]{0,2600}sembrarSesionAdmin\(res\)/);
   assert.match(rutas, /\/t\/:token'[\s\S]{0,2700}redirect\('\/parte\/admin'\)/);
 });
 
@@ -277,4 +281,112 @@ test('sin PARTE_ADMIN_TOKEN seteado, el link directo no existe', () => {
   // Que la variable esté vacía no puede significar "entra cualquiera".
   assert.match(rutas, /PARTE_ADMIN_TOKEN/);
   assert.match(rutas, /\/t\/:token'[\s\S]{0,1800}esperado[\s\S]{0,400}404/);
+});
+
+// ── La clave se pone UNA vez (10/9) ─────────────────────────────────────────
+//
+// Nico: "que la ADMIN_KEY quede guardada en una cookie de 30 días después de
+// ponerla una vez, así desde el celular no la tecleo más".
+//
+// Antes la key autorizaba el request y no dejaba nada: cada vez había que
+// volver a tipearla. Y la sesión que dejaba el PIN duraba 16 h, que es la del
+// turno de la gente: en un teléfono que se abre dos veces por semana, eso es
+// pedirlo siempre.
+
+const { DURACION_ADMIN_MS } = require('../lib/parte-rutas');
+
+test('🔴 la sesión del tablero dura 30 días y el token la acompaña', () => {
+  // No alcanza con estirar el Max-Age de la cookie: si el `exp` del token se
+  // quedara en 16 h, el navegador seguiría mandándola un mes y el servidor la
+  // rechazaría. El síntoma sería un tablero que pide el PIN igual, con la
+  // cookie viva al lado.
+  const t0 = Date.parse('2026-09-10T12:00:00Z');
+  const tok = crearToken({ admin: true }, SECRET, t0, DURACION_ADMIN_MS);
+  assert.ok(leerToken(tok, SECRET, t0 + 29 * 86400000), 'a los 29 días tendría que entrar');
+  assert.equal(leerToken(tok, SECRET, t0 + 31 * 86400000), null, 'a los 31 no');
+  assert.equal(DURACION_ADMIN_MS, 30 * 24 * 3600 * 1000);
+});
+
+test('🔴 la sesión de la GENTE sigue durando un turno, no un mes', () => {
+  // El teléfono del local pasa de mano en mano al cambio de turno: una sesión
+  // larga ahí es que el que entra escriba con el nombre del que se fue.
+  const t0 = Date.parse('2026-09-10T12:00:00Z');
+  const tok = crearToken({ puesto: 'fiam_m', nombre: 'Abril' }, SECRET, t0);
+  assert.ok(leerToken(tok, SECRET, t0 + 15 * 3600 * 1000));
+  assert.equal(leerToken(tok, SECRET, t0 + 17 * 3600 * 1000), null);
+});
+
+test('el login del tablero acepta la clave además del PIN', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // Con el mismo freno y la misma comparación en tiempo constante: son dos
+  // entradas al mismo lugar, no dos mecanismos.
+  assert.match(rutas, /req\.body\?\.clave/);
+  assert.match(rutas, /clave \? \[clave, String\(adminKey\)\] : \[pin, esperado\]/);
+});
+
+test('🔴 los tres caminos dejan la MISMA sesión', () => {
+  // El PIN, la clave y el link directo. Un segundo camino de sesión sería un
+  // segundo lugar donde equivocarse.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  const veces = (rutas.match(/sembrarSesionAdmin\(res\)/g) || []).length;
+  assert.ok(veces >= 4, 'la siembra de la cookie está duplicada o falta: ' + veces);
+  // Y una sola función la arma, con la duración larga explícita.
+  assert.match(rutas, /function sembrarSesionAdmin[\s\S]{0,300}DURACION_ADMIN_MS/);
+});
+
+// ── Ver como lo ve él (10/9) ────────────────────────────────────────────────
+//
+// Nico: "desde cada tarjeta del tablero, un botón «Ver como lo ve él» que abra
+// la lista del puesto en modo lectura, con la misma pantalla que usan los
+// empleados, sin PIN — se ve todo, no se puede tildar".
+
+test('🔴 la vista de lectura sirve la MISMA página que usan los puestos', () => {
+  // Una copia se desincroniza en el primer cambio de lista, y entonces muestra
+  // un turno que ya no existe con toda la cara de ser el de verdad.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /PAGINA_PARTE = path\.join\(__dirname, '\.\.', 'public', 'parte\.html'\)/);
+  assert.match(rutas, /r\.get\('\/admin\/ver\/:puesto', requiereAdminPagina/);
+  assert.match(rutas, /res\.sendFile\(PAGINA_PARTE\)/);
+});
+
+test('🔴 mirar no abre una sesión de puesto', () => {
+  // Si se le diera una sesión de fiambrería para que la pantalla funcione, todo
+  // lo que tocara quedaría firmado con el nombre de otra persona.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  // La ruta de datos es un GET y va con la cookie del TABLERO.
+  assert.match(rutas, /r\.get\('\/admin\/api\/ver\/:puesto', requiereAdmin/);
+  // Y no hay ningún POST que acepte esa cookie.
+  assert.doesNotMatch(rutas, /r\.post\('\/admin\/api\/ver/);
+  assert.doesNotMatch(rutas, /r\.post\([^)]*requiereAdmin\b/);
+});
+
+test('🔴 mirar un puesto no le crea el parte del día', () => {
+  // leerConLock() hace INSERT si el día no existe: usarlo acá sería que abrir la
+  // pantalla de producción un domingo deje un parte vacío de producción.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /api\/ver\/:puesto'[\s\S]{0,900}SELECT items, campos, nota, cierre FROM parte_dia/);
+  assert.doesNotMatch(rutas, /api\/ver\/:puesto'[\s\S]{0,900}leerConLock/);
+});
+
+test('la apertura queda anotada como admin_view', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /'admin_view'/);
+  // Con la fecha MIRADA, no la de hoy: así aparece en la línea de tiempo del día
+  // que se estaba mirando, que es donde se la busca.
+  assert.match(rutas, /anotarVista\(fechaPedida\(req\), puesto, req\)/);
+  // Sin la IP en claro, igual que los intentos fallidos.
+  assert.match(rutas, /anotarVista[\s\S]{0,700}huella\(ipCliente\(req\)\)/);
+});
+
+test('🔴 si no se puede anotar, la pantalla se abre igual', () => {
+  // Es un registro, no un permiso: dejar a Nico sin ver el turno porque no se
+  // pudo anotar que lo vio sería tener la cosa al revés.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /async function anotarVista[\s\S]{0,600}catch \(e\)[\s\S]{0,200}console\.warn/);
+});
+
+test('un puesto inventado no abre nada', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /admin\/ver\/:puesto'[\s\S]{0,300}!PUESTOS\.includes\(puesto\)/);
+  assert.match(rutas, /admin\/api\/ver\/:puesto'[\s\S]{0,300}!PUESTOS\.includes\(puesto\)/);
 });

@@ -159,6 +159,11 @@ header{
 .task.crit{background:linear-gradient(90deg,var(--rojo-tint) 0 3px,transparent 3px)}
 .task:hover{background:var(--surface-2)}
 .task.crit:hover{background:linear-gradient(90deg,var(--rojo) 0 3px,var(--surface-2) 3px)}
+/* Vista de lectura: la casilla se ve igual —el estado es el dato— pero nada
+   invita a tocarla. */
+.task.ro{cursor:default}
+.task.ro:hover{background:transparent}
+.task.ro.crit:hover{background:linear-gradient(90deg,var(--rojo-tint) 0 3px,transparent 3px)}
 .box{
   flex:none;width:26px;height:26px;margin-top:1px;border-radius:7px;
   border:2px solid var(--ink-3);background:transparent;
@@ -196,6 +201,9 @@ header{
 }
 .field input:focus{outline:2px solid var(--amarillo);outline-offset:1px;border-color:var(--amarillo)}
 .field input.filled{border-color:var(--verde);background:var(--verde-tint)}
+/* Borde punteado = se lee, no se escribe. Es la única diferencia con el input
+   normal: el número tiene que quedar tan legible como en la pantalla real. */
+.field input[readonly],textarea.nota[readonly]{cursor:default;border-style:dashed}
 
 textarea.nota{
   width:100%;min-height:88px;padding:11px 12px;border-radius:var(--radius);
@@ -231,6 +239,9 @@ textarea.nota:focus{outline:2px solid var(--amarillo);outline-offset:1px}
   font-size:14px;line-height:1.5;color:var(--ink-2);
 }
 .note.red{border-left-color:var(--rojo)}
+/* El cartel de la vista del dueño: se lee distinto del resto de los avisos,
+   porque no le habla al que trabaja sino al que mira. */
+.note.lectura{border-left-color:var(--ambar);margin-top:0}
 .note b{color:var(--ink);font-weight:700}
 .note .nt{
   font-family:"Archivo",sans-serif;font-size:10.5px;font-weight:800;letter-spacing:.1em;
@@ -472,6 +483,33 @@ function primeraDelArea(){
   return (h >= 7 && h < 16) ? ids[0] : ids[1];
 }
 
+/* ---------- la vista de lectura del dueño ---------- */
+/*
+ * `/parte/admin/ver/<puesto>?fecha=<AAAA-MM-DD>` dibuja ESTA MISMA pantalla, con
+ * los datos de ese puesto, y sin poder tocar nada.
+ *
+ * 🔴 POR QUÉ ES LA MISMA PÁGINA Y NO UNA COPIA. El punto de "ver como lo ve él"
+ * es ver lo que ve él. Una pantalla aparte se desincroniza en el primer cambio
+ * de lista, y entonces muestra un turno que ya no existe con toda la cara de ser
+ * el de verdad.
+ *
+ * 🔴 EL CANDADO NO ESTÁ ACÁ, ESTÁ EN EL SERVIDOR. Esta bandera apaga los
+ * clicks, los inputs y los botones de cierre, que es lo que hace que la pantalla
+ * se entienda. Pero lo que garantiza que no se escriba nada es que el dueño
+ * entra con la cookie del TABLERO y no con una de puesto: /parte/api/evento le
+ * contesta 401. Si esto fuera sólo del lado del cliente, alcanzaría con la
+ * consola del navegador para tildarle la lista a alguien.
+ */
+const VISTA = (() => {
+  const m = location.pathname.match(/^\/parte\/admin\/ver\/([a-z_]+)\/?$/);
+  return m && PUESTOS.some(p => p.id === m[1]) ? m[1] : null;
+})();
+const SOLO_LECTURA = !!VISTA;
+const VISTA_FECHA = (() => {
+  const f = new URLSearchParams(location.search).get('fecha');
+  return /^\d{4}-\d{2}-\d{2}$/.test(f || '') ? f : '';
+})();
+
 const T = (id,hora,txt,det,crit) => ({id,hora,txt,det:det||'',crit:!!crit});
 const F = (id,lab,sub,ph) => ({id,tipo:'campo',lab,sub:sub||'',ph:ph||''});
 
@@ -699,6 +737,13 @@ let listaActiva = 'enc_m', yo = null;
 try{ yo = JSON.parse(localStorage.getItem('pf_yo')||'null'); }catch(e){ yo = null; }
 if(yo && (!yo.puesto || !PUESTOS.some(p => p.id === yo.puesto))) yo = null;
 if(yo && fueraDelArea(yo.puesto)) yo = null;
+/* 🔴 EN LECTURA NO SE TOCA EL localStorage. Este `yo` es de mentira: existe para
+   que las solapas y el encabezado sepan qué puesto se está mirando, y NUNCA se
+   guarda. Si se guardara, en un teléfono compartido el dueño le dejaría pisada
+   la sesión a la persona que está trabajando, y lo que ella tildara después
+   quedaría firmado con el puesto equivocado. El nombre tampoco se inventa: lo
+   dibuja pintarQuien() como la vuelta al tablero. */
+if(SOLO_LECTURA) yo = {puesto: VISTA, nombre: '', lectura: true};
 const miPuesto = () => yo ? PUESTOS.find(p => p.id === yo.puesto) : null;
 const soyJefe = () => { const p = miPuesto(); return !!(p && p.jefe); };
 
@@ -785,6 +830,12 @@ async function drenarCola(){
    lo que hay con SELECT … FOR UPDATE, así que dos teléfonos del mismo puesto no
    se pisan. */
 function evento(tipo, itemId, valor, detalle){
+  /* 🔴 EL ÚNICO PORTÓN DE SALIDA. Todo lo que escribe —tildes, campos, la nota,
+     el cierre y la reapertura— pasa por acá antes de tocar la cola. Cortar en
+     este punto y no en cada botón es lo que hace que la vista de lectura siga
+     siendo de lectura el día que se agregue un botón nuevo y alguien se olvide
+     de preguntarle a SOLO_LECTURA. */
+  if(SOLO_LECTURA) return;
   if(!yo){ abrirQuien(); return; }
   const cola = leerCola();
   cola.push({tipo: tipo, itemId: itemId == null ? null : String(itemId), valor: valor, detalle: detalle});
@@ -801,7 +852,40 @@ function eventoPronto(tipo, itemId, valor){
   tCampo[k] = setTimeout(() => evento(tipo, itemId, valor), 400);
 }
 
+/*
+ * El día, para la vista de lectura. Va contra el tablero y no contra
+ * /parte/api/dia: la cookie que trae el dueño es la del tablero, y la del Parte
+ * ni la tiene ni se le da.
+ *
+ * No escribe pf_yo ni toca la cola. Un 401 lo manda al tablero, que sabe pedir
+ * la clave; acá no hay PIN que pedir.
+ */
+async function traerVista(){
+  try{
+    const r = await fetch('/parte/admin/api/ver/' + encodeURIComponent(VISTA)
+      + (VISTA_FECHA ? '?fecha=' + encodeURIComponent(VISTA_FECHA) : ''),
+      {credentials:'same-origin'});
+    if(r.status === 401){ location.href = '/parte/admin'; return; }
+    if(!r.ok) throw new Error('http_' + r.status);
+    const d = await r.json();
+    hoy = d.fecha;
+    ESTADO[d.puesto] = {items: d.items, campos: d.campos, nota: d.nota, cierre: d.cierre};
+    /* El traspaso viene en la misma respuesta: es parte de lo que ve el de la
+       tarde al entrar, así que sin él esto no sería "como lo ve él". */
+    const origen = {enc_t:'enc_m', fiam_t:'fiam_m'}[d.puesto];
+    if(origen && d.traspaso) ESTADO[origen] = d.traspaso;
+    document.getElementById('fechaHoy').textContent =
+      new Date(hoy + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'});
+    pintarQuien();
+    setSync('sólo lectura');
+    if(escribiendo()) renderDiferido = true; else render();
+  }catch(e){
+    setSync('sin conexión', true);
+  }
+}
+
 async function traerDia(){
+  if(SOLO_LECTURA) return traerVista();
   try{
     const d = await api('dia');
     hoy = d.fecha;
@@ -843,6 +927,14 @@ async function traerDia(){
 
 async function conectar(){
   await traerDia();
+  if(SOLO_LECTURA){
+    /* El mismo refresco de 20 s, pero sin drenar la cola: en el teléfono del
+       dueño no hay cola propia, y si la hubiera —porque alguien usó ese mismo
+       navegador para trabajar— mandarla desde acá escribiría eventos viejos con
+       una sesión que no es la de esa persona. */
+    setInterval(traerDia, 20000);
+    return;
+  }
   /* Poll cada 20 s: es lo que hace que aparezca lo que cargó el otro. También
      aprovecha para drenar lo que quedó encolado sin conexión. */
   setInterval(() => { drenarCola(); if(!leerCola().length) traerDia(); }, 20000);
@@ -911,13 +1003,42 @@ function pedidoDePin(){
   return d;
 }
 
+/**
+ * El cartel de la vista de lectura.
+ *
+ * 🔴 SIN ESTO, LA PANTALLA PARECE ROTA. Es idéntica a la de la gente: el primer
+ * reflejo al abrirla es tocar una tarea, no pasa nada, y la conclusión razonable
+ * es que el parte se colgó. Dice qué se está mirando, de qué día, y que no se
+ * puede tildar a propósito.
+ */
+function cartelLectura(){
+  /* Describe SIEMPRE el puesto que se está mirando, no la solapa abierta: en
+     «Reglas» la solapa no es de nadie, y el cartel tiene que seguir diciendo de
+     quién es la pantalla. */
+  const p = PUESTOS.find(x => x.id === VISTA);
+  const d = document.createElement('div');
+  d.className = 'note lectura';
+  d.innerHTML = '<span class="nt">Vista del dueño · sólo lectura</span>';
+  const s = document.createElement('span');
+  const dia = hoy
+    ? new Date(hoy + 'T12:00:00').toLocaleDateString('es-AR',{weekday:'long',day:'numeric',month:'long'})
+    : 'hoy';
+  s.textContent = 'Así se ve la pantalla de ' + (p ? p.nombre + ' · ' + p.turno : VISTA)
+    + ' el ' + dia + '. Se ve todo, no se puede tildar ni escribir.'
+    + ' Quedó registrado en la línea de tiempo que la abriste.';
+  d.appendChild(s);
+  return d;
+}
+
 function render(){
   renderTabs();
   const L = LISTAS.find(x => x.id === listaActiva);
   const app = document.getElementById('app');
   app.innerHTML = '';
-  document.getElementById('btnWA').style.display = (L.reglas || !yo) ? 'none' : '';
+  /* El traspaso lo firma quien hizo el turno: en lectura no hay quién. */
+  document.getElementById('btnWA').style.display = (L.reglas || !yo || SOLO_LECTURA) ? 'none' : '';
   if(!yo && !L.reglas){ app.appendChild(pedidoDePin()); return; }
+  if(SOLO_LECTURA) app.appendChild(cartelLectura());
   if(L.reglas){ renderReglas(app); return; }
 
   const st = estadoLista(L.id);
@@ -967,7 +1088,12 @@ function render(){
   ta.className = 'nota';
   ta.placeholder = 'Lo que quedó pendiente, lo que se rompió, lo que el otro turno tiene que saber. Si no está acá, no pasó.';
   ta.value = st.nota || '';
-  ta.oninput = () => { st.nota = ta.value; eventoPronto('nota', null, ta.value); };
+  if(SOLO_LECTURA){
+    ta.readOnly = true;
+    if(!ta.value) ta.placeholder = 'Este turno no escribió novedades.';
+  } else {
+    ta.oninput = () => { st.nota = ta.value; eventoPronto('nota', null, ta.value); };
+  }
   app.appendChild(ta);
 
   app.appendChild(bloqueCierre(L, st, p));
@@ -1006,16 +1132,33 @@ function bloqueCierre(L, st, p){
       dd.textContent = st.cierre.detalle;
       c.appendChild(dd);
     }
-    const re = document.createElement('button');
-    re.className = 'btn c-re'; re.textContent = 'Reabrir';
-    re.onclick = () => { delete st.cierre; render(); evento('reapertura'); };
-    c.appendChild(re);
+    /* Reabrir el turno de otro es una escritura, y firmada por el que la hace.
+       El dueño mira; si hay que reabrir, lo reabre quien lo cerró. */
+    if(!SOLO_LECTURA){
+      const re = document.createElement('button');
+      re.className = 'btn c-re'; re.textContent = 'Reabrir';
+      re.onclick = () => { delete st.cierre; render(); evento('reapertura'); };
+      c.appendChild(re);
+    }
     wrap.appendChild(c);
     return wrap;
   }
 
   const res = document.createElement('p');
   res.className = 'c-res';
+  if(SOLO_LECTURA){
+    /* En segunda persona diría "te quedan" a quien no tiene nada que tildar. */
+    res.innerHTML = falta === 0
+      ? 'Están <b>las ' + p.total + '</b> tildadas, pero el turno todavía no se cerró.'
+      : 'Quedan <b>' + falta + '</b> sin tildar de ' + p.total + ', y el turno sigue sin cerrar.';
+    c.appendChild(res);
+    const ay0 = document.createElement('p');
+    ay0.className = 'c-ayuda';
+    ay0.textContent = 'El turno lo cierra quien lo hizo: queda firmado con su nombre y la hora.';
+    c.appendChild(ay0);
+    wrap.appendChild(c);
+    return wrap;
+  }
   res.innerHTML = falta === 0
     ? 'Tildaste <b>las ' + p.total + '</b>. Podés cerrar como terminado.'
     : 'Te quedan <b>' + falta + '</b> sin tildar de ' + p.total + '.';
@@ -1169,8 +1312,11 @@ function panelTraspaso(origenId){
 
 function tareaEl(L, it, st){
   const d = document.createElement('div');
-  d.className = 'task' + (it.crit ? ' crit' : '') + (st.items[it.id] ? ' done' : '');
-  d.setAttribute('role','button'); d.tabIndex = 0;
+  d.className = 'task' + (it.crit ? ' crit' : '') + (st.items[it.id] ? ' done' : '')
+    + (SOLO_LECTURA ? ' ro' : '');
+  /* En lectura no es un botón y tampoco entra por teclado: una casilla que se
+     puede enfocar y apretar sin que pase nada se lee como un bug. */
+  if(!SOLO_LECTURA){ d.setAttribute('role','button'); d.tabIndex = 0; }
   d.innerHTML =
     '<span class="box"><svg viewBox="0 0 24 24"><polyline points="4,12.5 9.5,18 20,6.5"></polyline></svg></span>' +
     '<div class="tbody"><div class="trow"><span class="thora"></span><span class="ttxt"></span></div></div>';
@@ -1198,8 +1344,10 @@ function tareaEl(L, it, st){
        dice cómo está la lista, el historial dice qué pasó. */
     evento(estaba ? 'destilde' : 'tilde', it.id);
   };
-  d.onclick = toggle;
-  d.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } };
+  if(!SOLO_LECTURA){
+    d.onclick = toggle;
+    d.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); toggle(); } };
+  }
   return d;
 }
 
@@ -1216,11 +1364,20 @@ function campoEl(L, it, st){
   if(inp.value) inp.classList.add('filled');
   const id = 'f_' + L.id + '_' + it.id;
   inp.id = id; lab.setAttribute('for', id);
-  inp.oninput = () => {
-    st.campos[it.id] = inp.value;
-    inp.classList.toggle('filled', !!inp.value);
-    renderTabs(); eventoPronto('campo', it.id, inp.value);
-  };
+  if(SOLO_LECTURA){
+    /* readOnly y no disabled: un input deshabilitado se dibuja gris y el número
+       de la caja es justo lo que se vino a leer. Se puede seleccionar y copiar,
+       no escribir. */
+    inp.readOnly = true;
+    inp.tabIndex = -1;
+    if(!inp.value) inp.placeholder = 'sin cargar';
+  } else {
+    inp.oninput = () => {
+      st.campos[it.id] = inp.value;
+      inp.classList.toggle('filled', !!inp.value);
+      renderTabs(); eventoPronto('campo', it.id, inp.value);
+    };
+  }
   d.appendChild(inp);
   return d;
 }
@@ -1326,6 +1483,14 @@ function renderReglas(app){
 /* ---------- quién sos ---------- */
 function pintarQuien(){
   const b = document.getElementById('btnQuien');
+  if(SOLO_LECTURA){
+    /* Acá va el nombre de quien está adentro, y en la vista de lectura no hay
+       nadie adentro: poner uno sería decir que esa persona abrió la pantalla.
+       El botón es la puerta de vuelta, que es lo único que hace falta. */
+    document.getElementById('quienTxt').textContent = '← Tablero';
+    b.classList.remove('set');
+    return;
+  }
   document.getElementById('quienTxt').textContent = yo ? yo.nombre : 'Entrar';
   b.classList.toggle('set', !!yo);
 }
@@ -1536,7 +1701,13 @@ document.getElementById('btnWA').onclick = () => {
 };
 
 /* ---------- arranque ---------- */
-document.getElementById('btnQuien').onclick = () => { if(yo) salir(); else abrirQuien(); };
+document.getElementById('btnQuien').onclick = () => {
+  /* En lectura este botón no cierra ninguna sesión: la del Parte no es del que
+     está mirando, y llamar a salir() le voltearía la sesión al empleado si el
+     tablero se abrió en el mismo navegador. Vuelve al tablero y listo. */
+  if(SOLO_LECTURA){ location.href = '/parte/admin'; return; }
+  if(yo) salir(); else abrirQuien();
+};
 /* La fecha la escribe traerDia() con la que manda el servidor: la operativa
    corta a las 05:00, y con el reloj del cliente el turno tarde vería el día
    siguiente. */
