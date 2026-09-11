@@ -235,58 +235,6 @@ test('el front del tablero pide un PIN, no la ADMIN_KEY', () => {
   assert.match(html, /credentials: 'same-origin'/);
 });
 
-// ── El acceso directo al tablero (8/9) ──────────────────────────────────────
-//
-// Nico: "pasame mi url que yo pueda entrar sin contraseña. acceso directo".
-//
-// 🔴 NO ES "SIN CONTRASEÑA": ES QUE LA CONTRASEÑA SEA EL LINK. El tablero muestra
-// los nombres de todos, la línea de tiempo entera y los montos de la caja. Un
-// `/parte/admin` abierto lo deja a la vista de cualquiera que adivine la URL —y
-// `/parte/admin` se adivina en el primer intento.
-//
-// El link lleva un token largo al azar: se guarda en favoritos, se toca una vez y
-// entra. Lo que cambia respecto de dejarlo abierto es que ese link NO se adivina,
-// y que se puede matar cambiando una variable en Railway sin tocar código.
-//
-// Lo que hay que decirle a Nico y está escrito en el commit: quien tenga el link,
-// entra. No va a un grupo.
-
-test('el link directo deja una sesión y manda al tablero', () => {
-  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  // Desde el 10/9 el link vive en /parte/admin/t/<token>, al lado del tablero.
-  assert.match(rutas, /r\.get\('\/admin\/t\/:token', entrarPorLink\)/);
-  // 🔴 Y LA RUTA VIEJA SIGUE. Es un link guardado en favoritos: sacarlo dejaría
-  // a Nico afuera del tablero desde el teléfono, sin nada que tocar.
-  assert.match(rutas, /r\.get\('\/t\/:token', entrarPorLink\)/);
-  // Deja la MISMA cookie que el PIN: no hay un segundo camino de sesión que
-  // mantener sincronizado. Los cuatro caminos pasan por sembrarSesionAdmin().
-  assert.match(rutas, /function entrarPorLink[\s\S]{0,2600}sembrarSesionAdmin\(res\)/);
-  assert.match(rutas, /function entrarPorLink[\s\S]{0,2700}redirect\('\/parte\/admin'\)/);
-});
-
-test('🔴 el token se compara en tiempo constante y con largo mínimo', () => {
-  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  // Un `===` se corta en el primer carácter distinto y eso se puede medir.
-  assert.match(rutas, /function entrarPorLink[\s\S]{0,2200}timingSafeEqual/);
-  // Y un token corto en la URL es peor que un PIN: no lo frena ningún límite de
-  // intentos porque no hay a quién atribuírselos.
-  assert.match(rutas, /LARGO_MINIMO_TOKEN|token.*length\s*<\s*\d{2}/);
-});
-
-test('🔴 un intento con token equivocado queda anotado', () => {
-  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  // Si alguien está probando links, tiene que verse en la línea de tiempo igual
-  // que los PIN fallidos.
-  assert.match(rutas, /function entrarPorLink[\s\S]{0,2500}login_fallido/);
-});
-
-test('sin PARTE_ADMIN_TOKEN seteado, el link directo no existe', () => {
-  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
-  // Que la variable esté vacía no puede significar "entra cualquiera".
-  assert.match(rutas, /PARTE_ADMIN_TOKEN/);
-  assert.match(rutas, /function entrarPorLink[\s\S]{0,1800}esperado[\s\S]{0,400}404/);
-});
-
 // ── La clave se pone UNA vez (10/9) ─────────────────────────────────────────
 //
 // Nico: "que la ADMIN_KEY quede guardada en una cookie de 30 días después de
@@ -299,16 +247,20 @@ test('sin PARTE_ADMIN_TOKEN seteado, el link directo no existe', () => {
 
 const { DURACION_ADMIN_MS } = require('../lib/parte-rutas');
 
-test('🔴 la sesión del tablero dura 30 días y el token la acompaña', () => {
+test('🔴 el PIN se pone una vez: la sesión del tablero dura un año', () => {
   // No alcanza con estirar el Max-Age de la cookie: si el `exp` del token se
-  // quedara en 16 h, el navegador seguiría mandándola un mes y el servidor la
+  // quedara en 16 h, el navegador seguiría mandándola un año y el servidor la
   // rechazaría. El síntoma sería un tablero que pide el PIN igual, con la
   // cookie viva al lado.
   const t0 = Date.parse('2026-09-10T12:00:00Z');
   const tok = crearToken({ admin: true }, SECRET, t0, DURACION_ADMIN_MS);
-  assert.ok(leerToken(tok, SECRET, t0 + 29 * 86400000), 'a los 29 días tendría que entrar');
-  assert.equal(leerToken(tok, SECRET, t0 + 31 * 86400000), null, 'a los 31 no');
-  assert.equal(DURACION_ADMIN_MS, 30 * 24 * 3600 * 1000);
+  assert.ok(leerToken(tok, SECRET, t0 + 300 * 86400000), 'a los 300 días tendría que entrar');
+  assert.equal(leerToken(tok, SECRET, t0 + 366 * 86400000), null, 'al año y pico no');
+  assert.equal(DURACION_ADMIN_MS, 365 * 24 * 3600 * 1000);
+  // Y se renueva en cada request autorizado, que es lo que hace que "una vez"
+  // sea una vez de verdad y no una vez por año.
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /function admitidoComoAdmin[\s\S]{0,400}sembrarSesionAdmin\(res\)/);
 });
 
 test('🔴 la sesión de la GENTE sigue durando un turno, no un mes', () => {
@@ -328,12 +280,12 @@ test('el login del tablero acepta la clave además del PIN', () => {
   assert.match(rutas, /clave \? \[clave, String\(adminKey\)\] : \[pin, esperado\]/);
 });
 
-test('🔴 los tres caminos dejan la MISMA sesión', () => {
-  // El PIN, la clave y el link directo. Un segundo camino de sesión sería un
-  // segundo lugar donde equivocarse.
+test('🔴 los caminos que quedan dejan la MISMA sesión', () => {
+  // El PIN, la clave y la cookie que se renueva. Un segundo camino de sesión
+  // sería un segundo lugar donde equivocarse.
   const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   const veces = (rutas.match(/sembrarSesionAdmin\(res\)/g) || []).length;
-  assert.ok(veces >= 4, 'la siembra de la cookie está duplicada o falta: ' + veces);
+  assert.ok(veces >= 3, 'la siembra de la cookie está duplicada o falta: ' + veces);
   // Y una sola función la arma, con la duración larga explícita.
   assert.match(rutas, /function sembrarSesionAdmin[\s\S]{0,300}DURACION_ADMIN_MS/);
 });
@@ -395,82 +347,44 @@ test('un puesto inventado no abre nada', () => {
   assert.match(rutas, /admin\/api\/ver\/:puesto'[\s\S]{0,300}!PUESTOS\.includes\(puesto\)/);
 });
 
-// ── El link es la puerta, la clave es el respaldo (10/9) ────────────────────
+// ── No se entra con token (10/9) ────────────────────────────────────────────
 //
-// Nico: "sacar el cuadro de clave para el dueño (…) entrar por esa URL abre el
-// tablero directo, sin pedir nada (…) dejar el cuadro de clave como vía de
-// respaldo si el token cambia".
+// Nico: "no quiero entrar con token... no entendés? busca otra forma".
+//
+// 🔴 EL PROBLEMA NO ERA LA SEGURIDAD DEL LINK, ERA EL TRÁMITE. Para entrar
+// "rápido" había que generar un token, pegarlo en Railway, desplegar, buscar el
+// link en los logs y guardarlo en favoritos — y volver a hacer todo eso el día
+// que se perdiera. Se reemplaza por lo que ya estaba y no requiere nada: el PIN
+// una vez, y una sesión de un año que se renueva sola.
+//
+// Estos asserts son en negativo a propósito: lo que hay que impedir es que la
+// entrada por token vuelva a aparecer "porque es cómoda".
 
-const { avisoLinkDirecto, linkDirecto, tokenSugerido, LARGO_MINIMO_TOKEN } = require('../lib/parte-rutas');
-
-/** Corre `fn` con PARTE_ADMIN_TOKEN en `valor` y lo deja como estaba. */
-function conToken(valor, fn) {
-  const antes = process.env.PARTE_ADMIN_TOKEN;
-  if (valor === null) delete process.env.PARTE_ADMIN_TOKEN;
-  else process.env.PARTE_ADMIN_TOKEN = valor;
-  try { return fn(); } finally {
-    if (antes === undefined) delete process.env.PARTE_ADMIN_TOKEN;
-    else process.env.PARTE_ADMIN_TOKEN = antes;
-  }
-}
-
-test('el token que se sugiere pasa el mínimo con margen', () => {
-  const t = tokenSugerido();
-  assert.ok(t.length >= LARGO_MINIMO_TOKEN, 'salió de ' + t.length + ' caracteres');
-  // base64url: nada que haya que escapar al pegarlo en una URL ni en Railway.
-  assert.match(t, /^[A-Za-z0-9_-]+$/);
-  assert.notEqual(t, tokenSugerido(), 'dos seguidos dieron lo mismo');
-});
-
-test('con el token seteado se imprime el link completo', () => {
-  const tok = 'a'.repeat(40);
-  conToken(tok, () => {
-    const lineas = avisoLinkDirecto('https://punilla.up.railway.app').join('\n');
-    assert.match(lineas, /https:\/\/punilla\.up\.railway\.app\/parte\/admin\/t\/a{40}/);
-    // Y con la advertencia al lado: quien tiene el link, entra.
-    assert.match(lineas, /NO a un grupo/);
-  });
-});
-
-test('la barra de más en la base no duplica la del link', () => {
-  conToken('b'.repeat(40), () => {
-    assert.equal(
-      linkDirecto('https://punilla.up.railway.app/'),
-      'https://punilla.up.railway.app/parte/admin/t/' + 'b'.repeat(40),
-    );
-  });
-});
-
-test('🔴 sin token, el aviso trae uno listo para pegar', () => {
-  // Que la variable esté vacía no puede significar "entra cualquiera": el link
-  // no existe, y lo que se imprime es cómo hacerlo existir.
-  conToken(null, () => {
-    assert.equal(linkDirecto('https://x.com'), null);
-    const lineas = avisoLinkDirecto('https://x.com').join('\n');
-    assert.match(lineas, /no está seteado/);
-    const m = lineas.match(/PARTE_ADMIN_TOKEN=([A-Za-z0-9_-]+)/);
-    assert.ok(m, 'no imprimió un token para pegar');
-    assert.ok(m[1].length >= LARGO_MINIMO_TOKEN);
-  });
-});
-
-test('🔴 un token corto no habilita el link y se avisa por qué', () => {
-  // Un token corto en la URL es peor que un PIN: no lo frena ningún contador de
-  // intentos, porque no hay a quién atribuírselos más que a una IP que se rota.
-  conToken('corto', () => {
-    assert.equal(linkDirecto('https://x.com'), null);
-    const lineas = avisoLinkDirecto('https://x.com').join('\n');
-    assert.match(lineas, /5 caracteres y el mínimo son 32/);
-    assert.match(lineas, /PARTE_ADMIN_TOKEN=[A-Za-z0-9_-]{32,}/);
-  });
-});
-
-test('el aviso se imprime una sola vez, al arrancar', () => {
+test('🔴 no hay ninguna entrada por token, ni variable que configurar', () => {
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
   const srv = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
-  // Dentro del callback de listen, no en un middleware: en cada request sería
-  // el token en los logs mil veces por día.
-  assert.match(srv, /app\.listen\(PORT, \(\) => \{[\s\S]{0,400}avisoLinkDirecto\(baseUrl\(\)\)/);
-  assert.doesNotMatch(srv, /app\.use\([^)]*avisoLinkDirecto/);
-  // El dominio lo pone Railway solo; PARTE_BASE_URL es para el dominio propio.
-  assert.match(srv, /RAILWAY_PUBLIC_DOMAIN/);
+  for (const rastro of ['PARTE_ADMIN_TOKEN', 'entrarPorLink', 'LARGO_MINIMO_TOKEN', 'avisoLinkDirecto']) {
+    assert.equal(rutas.includes(rastro), false, 'volvió ' + rastro + ' a parte-rutas');
+    assert.equal(srv.includes(rastro), false, 'volvió ' + rastro + ' a server.js');
+  }
+  assert.doesNotMatch(rutas, /r\.get\('\/t\/:token'/);
+  assert.doesNotMatch(rutas, /admin\/t\/:token/);
+});
+
+test('🔴 el token tampoco se imprime en los logs', () => {
+  // Mientras existió, el link completo iba al log de arranque. Ya no hay link, y
+  // los logs de Railway no tienen por qué llevar ningún secreto del tablero.
+  const srv = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  assert.match(srv, /app\.listen\(PORT, \(\) => console\.log\(`\[punilla\] escuchando en :\$\{PORT\}`\)\)/);
+});
+
+test('para entrar al tablero no hace falta setear nada nuevo', () => {
+  // Sin PARTE_ADMIN_PIN sirve la ADMIN_KEY, que ya existía. O sea: se despliega
+  // y se entra, sin tocar Variables.
+  const env = fs.readFileSync(path.join(__dirname, '..', '.env.example'), 'utf8');
+  assert.equal(env.includes('PARTE_ADMIN_TOKEN'), false);
+  assert.match(env, /PARTE_ADMIN_PIN=/);
+  const rutas = fs.readFileSync(path.join(__dirname, '..', 'lib', 'parte-rutas.js'), 'utf8');
+  assert.match(rutas, /pin_no_configurado/);
+  assert.match(rutas, /clave \? \[clave, String\(adminKey\)\] : \[pin, esperado\]/);
 });
